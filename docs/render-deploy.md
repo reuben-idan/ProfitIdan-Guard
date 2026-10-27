@@ -1,0 +1,33 @@
+# Deploy the backend API on Render (free tier)
+
+Blueprint is [render.yaml](../render.yaml). The API serves the demo data
+from the repo plus any sessions uploaded at runtime.
+
+## Steps
+
+1. Push this repo to GitHub (`git push origin main` from your own shell).
+2. Render dashboard -> New -> Blueprint -> select `ProfitIdan-Guard`.
+3. When prompted for `MODEL_API_KEY`, paste the Meta Model API key.
+   `MODEL_NAME` and `META_API_BASE_URL` come from the blueprint.
+4. Deploy. Note the service URL, e.g.
+   `https://profitpilot-api.onrender.com`. Check `/health`.
+5. Set `CORS_ORIGINS` on the Render service to your Vercel frontend URL
+   (comma-separated if several), then redeploy the service.
+6. On the Vercel project, set `NEXT_PUBLIC_API_URL` to the Render service
+   URL (no trailing slash) and redeploy the frontend.
+
+## Free-tier limits (know before demo day)
+
+- The service sleeps after ~15 minutes idle; the first request after sleep
+  takes up to a minute. Warm it by opening `/health` before the demo.
+- The SQLite DB and uploaded sessions are ephemeral: restarts wipe
+  investigations, actions, and audit history. The repo-shipped demo data
+  is unaffected, and a fresh investigation always works.
+- Paid upgrade path if needed: Render persistent disk for the SQLite file,
+  or move the store to Postgres.
+
+## Verify
+
+- `GET <render-url>/health` -> `{"status": "ok"}`
+- `GET <render-url>/docs` -> API docs in a browser
+- From the Vercel frontend: run the demo question end to end.

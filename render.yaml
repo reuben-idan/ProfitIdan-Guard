@@ -1,0 +1,22 @@
+# Render blueprint: ProfitPilot AI backend (free tier).
+# Deploy via Dashboard -> New -> Blueprint, pointing at this repo.
+# Free-tier notes: the service sleeps after inactivity (first request is
+# slow), and the SQLite DB + uploaded sessions are ephemeral (wiped on
+# restart). Demo data ships in the repo, so investigations always work.
+services:
+  - type: web
+    name: profitpilot-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: MODEL_NAME
+        value: muse-spark-1.3
+      - key: META_API_BASE_URL
+        value: https://api.meta.ai/v1
+      - key: MODEL_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: http://localhost:3000

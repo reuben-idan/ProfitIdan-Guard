@@ -65,6 +65,13 @@ Ask: *"Sales are up but I'm running out of cash. Find the problem and tell
 me what to do first."* The agent investigates with tools, TradeGuard
 verifies each finding, and the owner approves a drafted payment reminder.
 
+## Deploy
+
+- Backend API: Render free tier via [render.yaml](render.yaml) — see
+  [docs/render-deploy.md](docs/render-deploy.md).
+- Frontend: Vercel project with Root Directory `frontend` and
+  `NEXT_PUBLIC_API_URL` pointing at the Render service URL.
+
 ## Repo map
 
 - `backend/agent/` — Meta tool-calling loop, tool registry, prompts

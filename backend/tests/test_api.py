@@ -158,6 +158,15 @@ def test_cors_allows_dev_frontend():
     assert any(isinstance(m.cls, type) and issubclass(m.cls, CORSMiddleware) for m in app.user_middleware)
 
 
+def test_cors_origins_from_env(monkeypatch):
+    from backend.main import cors_origins
+
+    monkeypatch.setenv("CORS_ORIGINS", "https://profit-idan-guard.vercel.app, http://localhost:3000")
+    assert cors_origins() == ["https://profit-idan-guard.vercel.app", "http://localhost:3000"]
+    monkeypatch.delenv("CORS_ORIGINS")
+    assert cors_origins() == ["http://localhost:3000"]
+
+
 def test_investigation_requires_api_key(env, monkeypatch):
     from fastapi import HTTPException
 
