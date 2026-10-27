@@ -1,0 +1,5 @@
+bill_id,supplier,issue_date,due_date,amount,amount_paid,status
+BILL-001,Unilever Ghana,2026-09-10,2026-10-10,20000.00,20000.00,paid
+BILL-002,PZ Cussons Ghana,2026-10-01,2026-10-31,14000.00,0.00,unpaid
+BILL-003,Fan Milk Ltd,2026-10-05,2026-11-04,8000.00,0.00,unpaid
+BILL-004,Unilever Ghana,2026-08-25,2026-09-24,10000.00,10000.00,paid

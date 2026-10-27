@@ -1,0 +1,7 @@
+invoice_id,customer,issue_date,due_date,amount,amount_paid,status
+INV-001,Owusu Retail,2026-09-01,2026-09-30,15000.00,15000.00,paid
+INV-002,Kumasi Mart,2026-09-15,2026-10-15,12000.00,0.00,unpaid
+INV-003,Accra Fresh Foods,2026-10-01,2026-10-31,18000.00,0.00,unpaid
+INV-004,Owusu Retail,2026-10-16,2026-11-15,9000.00,0.00,unpaid
+INV-005,Tema Provisions,2026-08-20,2026-09-19,25000.00,10000.00,partial
+INV-006,Kumasi Mart,2026-10-20,2026-11-19,11000.00,0.00,unpaid

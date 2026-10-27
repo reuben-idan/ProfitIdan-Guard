@@ -1,0 +1,9 @@
+sale_id,date,product_id,product,qty,unit_price
+S-101,2026-09-05,RICE-25KG,Jasmine Rice 25kg,150,320.00
+S-102,2026-09-12,OIL-5L,Cooking Oil 5L,120,180.00
+S-103,2026-09-20,SUGAR-50KG,Sugar 50kg,40,450.00
+S-104,2026-09-25,MILK-CRT,Evaporated Milk carton,30,220.00
+S-001,2026-10-03,RICE-25KG,Jasmine Rice 25kg,200,320.00
+S-002,2026-10-08,OIL-5L,Cooking Oil 5L,150,180.00
+S-003,2026-10-14,SUGAR-50KG,Sugar 50kg,40,450.00
+S-004,2026-10-21,MILK-CRT,Evaporated Milk carton,50,220.00

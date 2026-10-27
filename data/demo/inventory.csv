@@ -1,0 +1,6 @@
+product_id,product,unit_cost,prev_unit_cost,qty_on_hand,last_restock_date
+RICE-25KG,Jasmine Rice 25kg,260.00,260.00,400,2026-10-01
+OIL-5L,Cooking Oil 5L,150.00,150.00,300,2026-10-01
+SUGAR-50KG,Sugar 50kg,430.00,380.00,500,2026-07-15
+MILK-CRT,Evaporated Milk carton,190.00,190.00,120,2026-10-10
+SOAP-BOX,Laundry Soap box,95.00,95.00,600,2026-06-01

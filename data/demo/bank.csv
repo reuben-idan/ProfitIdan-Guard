@@ -1,0 +1,7 @@
+txn_id,date,description,reference,amount
+BANK-001,2026-10-02,Customer payment - Owusu Retail,INV-001,15000.00
+BANK-002,2026-10-09,Supplier payment - Unilever Ghana,BILL-001,-20000.00
+BANK-003,2026-10-15,Customer part-payment - Tema Provisions,INV-005,10000.00
+BANK-004,2026-10-18,Warehouse rent - Makola,,-6000.00
+BANK-005,2026-10-20,Fuel and delivery,,-2500.00
+BANK-006,2026-10-25,Staff salaries - October,,-8500.00
