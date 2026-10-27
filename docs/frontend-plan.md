@@ -30,6 +30,7 @@ may hard-code conclusions — every figure renders from API responses.
 
 - GET `/health`
 - POST `/uploads` `{filename, kind, content}`
+- POST `/sessions` `{name}`, POST `/sessions/{id}/files`, POST `/sessions/{id}/meta`, GET `/sessions/{id}`
 - POST `/investigations` `{question, data_dir?}` -> `{result, verdicts}`
 - GET `/investigations/{id}`
 - POST `/actions` `{type, target, amount, verified_amount, finding_ref?}`

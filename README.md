@@ -28,6 +28,17 @@ uvicorn backend.main:app --reload
 
 API docs: http://127.0.0.1:8000/docs
 
+Run a live investigation from the CLI (needs `MODEL_API_KEY` in `.env`):
+
+```powershell
+python -m backend.investigate --data data/demo "Sales are up but I'm running out of cash. Find the problem and tell me what to do first."
+```
+
+To investigate your own files: create a session (`POST /sessions`), upload
+each CSV into it (`POST /sessions/{id}/files`), set its meta
+(`POST /sessions/{id}/meta`), then investigate with `--data` pointing at the
+session path (or `data_dir` in the API).
+
 ## The demo story
 
 Fictional Accra Foods Distributors Ltd (all data synthetic, planted
@@ -47,7 +58,8 @@ verifies each finding, and the owner approves a drafted payment reminder.
 - `backend/finance/` — deterministic tools: revenue, margins,
   reconciliation, receivables, payables, inventory aging, cash forecast
 - `backend/verification/` — TradeGuard evidence + verifier + action guard
-- `backend/api/` — FastAPI: uploads, investigations, actions/approvals
+- `backend/api/` — FastAPI: uploads, sessions, investigations, actions/approvals
+- `backend/investigate.py` — CLI runner for live Meta investigations
 - `backend/tests/` — pytest suite with deterministic expected outputs
 - `data/demo/` — synthetic dataset + expected answers
 - `docs/` — architecture, demo script, frontend plan

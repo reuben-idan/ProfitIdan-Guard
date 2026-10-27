@@ -46,6 +46,61 @@ def test_wrong_currency_is_contradicted(ctx):
     assert verdict["status"] == "contradicted"
 
 
+def test_missing_currency_is_unverified_not_contradicted(ctx):
+    finding = _finding()
+    del finding["currency"]
+    verdict = verify_finding(finding, ctx.bundle)
+    assert verdict["status"] == "unverified"
+
+
+def test_tool_check_verified(ctx):
+    finding = _finding(
+        amount_checks=[
+            {
+                "label": "Overdue total",
+                "tool": "identify_unpaid_invoices",
+                "args": {"horizon_days": 14},
+                "path": "result.overdue_total",
+                "expected": "27000.00",
+            }
+        ]
+    )
+    verdict = verify_finding(finding, ctx.bundle)
+    assert verdict["status"] == "verified"
+
+
+def test_tool_check_mismatch_is_contradicted(ctx):
+    finding = _finding(
+        amount_checks=[
+            {
+                "label": "Overdue total",
+                "tool": "identify_unpaid_invoices",
+                "args": {"horizon_days": 14},
+                "path": "result.overdue_total",
+                "expected": "99999.00",
+            }
+        ]
+    )
+    verdict = verify_finding(finding, ctx.bundle)
+    assert verdict["status"] == "contradicted"
+
+
+def test_tool_check_bad_path_is_unverified(ctx):
+    finding = _finding(
+        amount_checks=[
+            {
+                "label": "Bogus",
+                "tool": "identify_unpaid_invoices",
+                "args": {},
+                "path": "result.nope",
+                "expected": "0.00",
+            }
+        ]
+    )
+    verdict = verify_finding(finding, ctx.bundle)
+    assert verdict["status"] == "unverified"
+
+
 def test_no_evidence_is_unverified(ctx):
     verdict = verify_finding(_finding(evidence_ids=[]), ctx.bundle)
     assert verdict["status"] == "unverified"

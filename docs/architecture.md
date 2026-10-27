@@ -23,8 +23,12 @@ the owner approves. Demo customer: a fictional Ghanaian distributor (GHS).
   returns `verified` / `unverified` / `contradicted`. `guard_action` gates
   consequential actions on a verified ceiling + explicit approval.
 - `backend/api/` — FastAPI: `/uploads` (validate + store CSVs),
-  `/investigations` (run agent, verify findings, persist), `/actions`
-  (draft -> approve/reject -> simulated execute, with audit trail).
+  `/sessions` (assemble several uploads + meta into one dataset
+  directory), `/investigations` (run agent, verify findings, persist),
+  `/actions` (draft -> approve/reject -> simulated execute, with audit
+  trail).
+- `backend/investigate.py` — CLI runner: live investigation + TradeGuard
+  verdicts from one command, for iteration without the frontend.
 - `backend/models/store.py` — SQLite record of uploads, investigations,
   actions, and the audit trail.
 - `data/demo/` — fictional dataset with planted problems and

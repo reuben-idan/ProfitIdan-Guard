@@ -11,7 +11,7 @@ import json
 import os
 from dataclasses import dataclass, field
 
-from .prompts import SYSTEM_PROMPT
+from .prompts import REPAIR_PROMPT, SYSTEM_PROMPT
 from .tools import TOOL_SCHEMAS, ToolContext, run_tool
 
 
@@ -38,10 +38,17 @@ class InvestigationResult:
 class MetaClient:
     """Thin wrapper over the Meta Model API chat endpoint."""
 
-    def __init__(self, model: str | None = None, base_url: str | None = None, api_key: str | None = None):
+    def __init__(
+        self,
+        model: str | None = None,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        max_tokens: int = 8000,
+    ):
         self.model = model or os.getenv("MODEL_NAME", "muse-spark-1.3")
         self.base_url = base_url or os.getenv("META_API_BASE_URL", "https://api.meta.ai/v1")
         self.api_key = api_key or os.getenv("MODEL_API_KEY", "")
+        self.max_tokens = max_tokens
 
     def chat(self, messages: list[dict], tools: list[dict]) -> dict:
         from openai import OpenAI  # lazy: keeps core testable without the SDK
@@ -50,7 +57,7 @@ class MetaClient:
             raise RuntimeError("MODEL_API_KEY is not set")
         client = OpenAI(base_url=self.base_url, api_key=self.api_key)
         response = client.chat.completions.create(
-            model=self.model, messages=messages, tools=tools or None
+            model=self.model, messages=messages, tools=tools or None, max_tokens=self.max_tokens
         )
         message = response.choices[0].message
         tool_calls = []
@@ -89,7 +96,14 @@ def run_investigation(
             }
         )
         if not tool_calls:
-            _finish(result, reply.get("content") or "")
+            if _finish(result, reply.get("content") or ""):
+                return result
+            # One repair turn, no tools: ask for the JSON object again.
+            messages.append({"role": "user", "content": REPAIR_PROMPT})
+            repair = client.chat(messages, [])
+            if _finish(result, repair.get("content") or ""):
+                return result
+            result.narrative = repair.get("content") or reply.get("content") or ""
             return result
         for call in tool_calls:
             output = run_tool(ctx, call["name"], call["arguments"])
@@ -109,11 +123,14 @@ def run_investigation(
     return result
 
 
-def _finish(result: InvestigationResult, content: str) -> None:
+def _finish(result: InvestigationResult, content: str) -> bool:
     try:
         final = json.loads(content)
-        result.findings = final.get("findings", [])
-        result.recommended_actions = final.get("recommended_actions", [])
-        result.completed = True
-    except (json.JSONDecodeError, AttributeError):
-        result.narrative = content
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        return False
+    if not isinstance(final, dict) or "findings" not in final:
+        return False
+    result.findings = final.get("findings", [])
+    result.recommended_actions = final.get("recommended_actions", [])
+    result.completed = True
+    return True

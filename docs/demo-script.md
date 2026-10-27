@@ -11,8 +11,9 @@ problem and tell me what to do first."
 
 ## 0:25–0:55 — The agent investigates
 
-Upload `sales.csv`, `bank.csv`, `invoices.csv` (validation report shown).
-Ask the question. Show the model calling tools: `summarize_revenue`,
+Create a session, upload `sales.csv`, `bank.csv`, `invoices.csv` into it
+(validation report shown), set session meta. Ask the question. Show the
+model calling tools: `summarize_revenue`,
 `reconcile_bank_transactions`, `identify_unpaid_invoices`,
 `forecast_cash_position`, `analyze_inventory_aging`.
 

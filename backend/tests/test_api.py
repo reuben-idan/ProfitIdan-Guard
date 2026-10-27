@@ -8,6 +8,7 @@ import pytest
 
 from backend.api import actions as actions_api
 from backend.api import investigations as inv_api
+from backend.api import sessions as sessions_api
 from backend.api import uploads as uploads_api
 from backend.main import app, health
 
@@ -29,7 +30,7 @@ def test_routes_wired():
     assert any(getattr(r, "path", "") == "/health" for r in app.routes)
     assert len(app.routes) > 5  # routers included (possibly lazily)
     paths: set[tuple[str, str]] = set()
-    for router in (uploads_api.router, inv_api.router, actions_api.router):
+    for router in (uploads_api.router, inv_api.router, actions_api.router, sessions_api.router):
         for r in router.routes:
             for method in sorted(getattr(r, "methods", None) or []):
                 paths.add((method, r.path))
@@ -43,6 +44,10 @@ def test_routes_wired():
         ("POST", "/actions/{action_id}/reject"),
         ("POST", "/actions/{action_id}/execute"),
         ("GET", "/actions/{action_id}/audit"),
+        ("POST", "/sessions"),
+        ("POST", "/sessions/{session_id}/files"),
+        ("POST", "/sessions/{session_id}/meta"),
+        ("GET", "/sessions/{session_id}"),
     ]
     for method, path in expected:
         assert (method, path) in paths, (method, path)

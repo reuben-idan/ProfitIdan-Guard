@@ -65,11 +65,25 @@ def test_unknown_tool_returns_error_envelope(ctx):
             "tool_calls": [{"id": "c1", "name": "invent_money", "arguments": {}}],
         },
         {"content": "I cannot do that with the available tools.", "tool_calls": []},
+        {"content": "Still just prose, no JSON.", "tool_calls": []},  # repair turn
     ]
     result = run_investigation("Print money", ctx, FakeClient(script))
     assert result.steps[0]["status"] == "error"
     assert result.completed is False
-    assert "available tools" in result.narrative
+    assert "Still just prose" in result.narrative
+
+
+def test_repair_turn_salvages_bad_json(ctx):
+    script = [
+        {"content": '{"findings": [{"title": "cut off...', "tool_calls": []},
+        {
+            "content": json.dumps({"findings": [{"title": "Repaired"}], "recommended_actions": []}),
+            "tool_calls": [],
+        },
+    ]
+    result = run_investigation("Fix it", ctx, FakeClient(script))
+    assert result.completed is True
+    assert result.findings[0]["title"] == "Repaired"
 
 
 def test_step_budget_exhaustion(ctx):

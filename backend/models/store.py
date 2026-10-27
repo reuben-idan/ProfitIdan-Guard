@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS audit (
     id TEXT PRIMARY KEY, actor TEXT, event TEXT, ref_id TEXT,
     detail TEXT, created_at TEXT
 );
+CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY, name TEXT, path TEXT, created_at TEXT
+);
 """
 
 
@@ -55,6 +58,15 @@ class Store:
         with sqlite3.connect(self.path) as conn:
             conn.row_factory = sqlite3.Row
             return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+    # -- sessions --------------------------------------------------------------------
+    def create_session(self, name: str, path: str) -> str:
+        sid = f"s_{uuid.uuid4().hex[:8]}"
+        self._write("INSERT INTO sessions VALUES (?,?,?,?)", (sid, name, path, _now()))
+        return sid
+
+    def get_session(self, sid: str) -> dict | None:
+        return self._one("SELECT * FROM sessions WHERE id=?", (sid,))
 
     # -- uploads / investigations -------------------------------------------------
     def record_upload(self, filename: str, kind: str, rows: int, issues: list, path: str) -> str:

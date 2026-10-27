@@ -9,8 +9,10 @@ Verdicts:
 
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 
+from ..agent.tools import ToolContext, run_tool
 from ..finance.datasets import DataBundle, money, parse_decimal
 from .evidence import EvidenceRegistry
 
@@ -19,12 +21,45 @@ def _check(label: str, passed: bool, detail: str) -> dict:
     return {"check": label, "passed": passed, "detail": detail}
 
 
-def verify_finding(finding: dict, bundle: DataBundle) -> dict:
+def _context(source: DataBundle | ToolContext) -> ToolContext:
+    if isinstance(source, ToolContext):
+        return source
+    return ToolContext(data_dir=str(source.data_dir), bundle=source)
+
+
+def _verify_tool_check(spec: dict, ctx: ToolContext) -> tuple[bool | None, str]:
+    """Re-run a finance tool and compare a result path.
+
+    Returns True on match, False on contradiction, None when the check
+    cannot run (unknown tool, bad path): missing proof is unverified,
+    never a pass.
+    """
+    output = run_tool(ctx, spec["tool"], spec.get("args", {}))
+    if output.get("status") != "success":
+        return None, f"tool {spec['tool']} failed: {output.get('error')}"
+    node: object = output
+    for key in str(spec.get("path", "")).split("."):
+        if not isinstance(node, dict) or key not in node:
+            return None, f"path {spec.get('path')} not in {spec['tool']} output"
+        node = node[key]
+    actual = node if isinstance(node, str) else json.dumps(node, sort_keys=True)
+    expected = spec["expected"]
+    if actual == expected:
+        return True, f"re-ran {spec['tool']}: {spec.get('path')} matches"
+    return False, f"re-ran {spec['tool']}: records say {actual}, finding claims {expected}"
+
+
+def verify_finding(finding: dict, source: DataBundle | ToolContext) -> dict:
     """finding = {
         "title": str, "claim": str, "evidence_ids": [str],
         "currency": str, "period": {"start": str, "end": str} (optional),
-        "amount_checks": [{"label", "dataset", "ids", "field", "expected"}] (optional),
+        "amount_checks": [
+            {"label", "dataset", "ids", "field", "expected"}  # source check
+            | {"label", "tool", "args", "path", "expected"}   # tool check
+        ] (optional),
     }"""
+    bundle = source.bundle if isinstance(source, ToolContext) else source
+    ctx = _context(source)
     registry = EvidenceRegistry(bundle)
     checks: list[dict] = []
     hard_failure = False
@@ -45,16 +80,28 @@ def verify_finding(finding: dict, bundle: DataBundle) -> dict:
             )
 
     expected_currency = bundle.meta["currency"]
-    if finding.get("currency") != expected_currency:
+    claimed_currency = finding.get("currency")
+    if claimed_currency == expected_currency:
+        checks.append(_check("currency", True, expected_currency))
+    elif not claimed_currency:
+        checks.append(_check("currency", False, "finding states no currency"))
+        soft_failure = True
+    else:
         checks.append(
-            _check("currency", False, f"finding uses {finding.get('currency')}, records use {expected_currency}")
+            _check("currency", False, f"finding uses {claimed_currency}, records use {expected_currency}")
         )
         hard_failure = True
-    else:
-        checks.append(_check("currency", True, expected_currency))
 
     for spec in finding.get("amount_checks", []):
         label = spec.get("label", "amount")
+        if "tool" in spec:
+            passed, detail = _verify_tool_check(spec, ctx)
+            checks.append(_check(label, passed is True, detail))
+            if passed is False:
+                hard_failure = True
+            elif passed is None:
+                soft_failure = True
+            continue
         try:
             index = bundle.by_id(spec["dataset"])
         except KeyError:
