@@ -3,6 +3,7 @@ every finding through TradeGuard before returning."""
 
 from __future__ import annotations
 
+import json
 import os
 
 from fastapi import APIRouter, HTTPException
@@ -46,4 +47,8 @@ def get_investigation(investigation_id: str) -> dict:
     record = _store().get_investigation(investigation_id)
     if record is None:
         raise HTTPException(status_code=404, detail="investigation not found")
-    return record
+    return {
+        **record,
+        "result": json.loads(record["result"]),
+        "verdicts": json.loads(record["verdicts"]),
+    }

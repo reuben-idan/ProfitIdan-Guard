@@ -1,8 +1,8 @@
 # Frontend plan (Next.js, target Oct 31)
 
-Not built yet. When built: Next.js + TypeScript + Tailwind, `frontend/`
-in this monorepo, talking to the FastAPI backend below. Nothing in the UI
-may hard-code conclusions — every figure renders from API responses.
+Built as planned in `frontend/`: Next.js + TypeScript + Tailwind, talking
+to the FastAPI backend below. Nothing in the UI hard-codes conclusions —
+every figure renders from API responses.
 
 ## Pages
 

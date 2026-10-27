@@ -28,6 +28,19 @@ uvicorn backend.main:app --reload
 
 API docs: http://127.0.0.1:8000/docs
 
+Frontend (needs the backend running on port 8000):
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:3000 in a browser: assemble a dataset (or use the
+demo data), ask the demo question, review evidence with TradeGuard verdicts,
+then approve actions on the Actions page. Set `NEXT_PUBLIC_API_URL` if the
+backend runs elsewhere.
+
 Run a live investigation from the CLI (needs `MODEL_API_KEY` in `.env`):
 
 ```powershell
@@ -61,6 +74,7 @@ verifies each finding, and the owner approves a drafted payment reminder.
 - `backend/api/` — FastAPI: uploads, sessions, investigations, actions/approvals
 - `backend/investigate.py` — CLI runner for live Meta investigations
 - `backend/tests/` — pytest suite with deterministic expected outputs
+- `frontend/` — Next.js app: dataset assembly, investigation review, approvals
 - `data/demo/` — synthetic dataset + expected answers
 - `docs/` — architecture, demo script, frontend plan
 

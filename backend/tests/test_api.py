@@ -137,6 +137,27 @@ def test_reject_and_double_approve_conflict(env):
     assert exc.value.status_code == 409
 
 
+def test_get_investigation_returns_parsed_result(env):
+    from backend.models.store import Store
+
+    store = Store(env / "test.db")
+    iid = store.save_investigation(
+        "Why no cash?",
+        {"findings": [{"title": "t"}], "steps": []},
+        [{"title": "t", "status": "verified"}],
+        "completed",
+    )
+    body = inv_api.get_investigation(iid)
+    assert body["result"]["findings"] == [{"title": "t"}]
+    assert body["verdicts"][0]["status"] == "verified"
+
+
+def test_cors_allows_dev_frontend():
+    from fastapi.middleware.cors import CORSMiddleware
+
+    assert any(isinstance(m.cls, type) and issubclass(m.cls, CORSMiddleware) for m in app.user_middleware)
+
+
 def test_investigation_requires_api_key(env, monkeypatch):
     from fastapi import HTTPException
 
