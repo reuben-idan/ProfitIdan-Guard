@@ -82,6 +82,25 @@ def validate_csv(kind: str, content: str) -> tuple[list[dict], list[str]]:
     return accepted, issues
 
 
+TEMPLATE_ROWS = {
+    "invoices": "INV-001,Example Customer,2026-10-01,2026-10-31,5000.00,0.00,unpaid",
+    "supplier_bills": "BILL-001,Example Supplier,2026-10-01,2026-10-31,3000.00,0.00,unpaid",
+    "bank": "BANK-001,2026-10-15,Customer payment,INV-001,5000.00",
+    "sales": "S-001,2026-10-03,PROD-01,Example Product,10,50.00",
+    "inventory": "PROD-01,Example Product,30.00,28.00,100,2026-10-01",
+}
+
+
+@router.get("/templates/{kind}")
+def template(kind: str) -> dict:
+    if kind not in REQUIRED_COLUMNS:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail=f"unknown kind: {kind}")
+    header = ",".join(REQUIRED_COLUMNS[kind])
+    return {"kind": kind, "filename": TABLE_FILES[kind], "content": f"{header}\n{TEMPLATE_ROWS[kind]}\n"}
+
+
 @router.post("")
 def upload(req: UploadRequest) -> dict:
     if req.kind not in REQUIRED_COLUMNS:

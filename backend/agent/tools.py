@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..finance import cashflow, inventory, profitability, reconciliation
+from ..finance import cashflow, insights, inventory, profitability, reconciliation
 from ..finance.datasets import DataBundle, load_bundle
 
 
@@ -50,6 +50,14 @@ def run_tool(ctx: ToolContext, name: str, args: dict | None = None) -> dict:
             )
         if name == "forecast_cash_position":
             return cashflow.forecast_cash_position(bundle, int(args.get("horizon_days", 14)))
+        if name == "business_snapshot":
+            return insights.business_snapshot(bundle, int(args.get("horizon_days", 14)))
+        if name == "prioritize_collections":
+            return insights.prioritize_collections(
+                bundle, int(args.get("horizon_days", 14)), int(args.get("limit", 5))
+            )
+        if name == "customer_exposure":
+            return insights.customer_exposure(bundle)
         return _envelope(name, "error", error=f"unknown tool: {name}")
     except KeyError as exc:
         return _envelope(name, "error", error=f"missing argument: {exc}")
@@ -141,6 +149,39 @@ TOOL_SCHEMAS: list[dict] = [
                 "type": "object",
                 "properties": {"horizon_days": {"type": "integer", "default": 14}},
             },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "business_snapshot",
+            "description": "One-screen KPIs: cash, revenue, collection rate, leaks ranked by size, forecast.",
+            "parameters": {
+                "type": "object",
+                "properties": {"horizon_days": {"type": "integer", "default": 14}},
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "prioritize_collections",
+            "description": "Ranked collection queue by cash impact (balance weighted by days overdue).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "horizon_days": {"type": "integer", "default": 14},
+                    "limit": {"type": "integer", "default": 5},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "customer_exposure",
+            "description": "Per-customer outstanding exposure with concentration and risk flags.",
+            "parameters": {"type": "object", "properties": {}},
         },
     },
 ]

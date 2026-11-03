@@ -36,7 +36,9 @@ def test_routes_wired():
                 paths.add((method, r.path))
     expected = [
         ("POST", "/uploads"),
+        ("GET", "/uploads/templates/{kind}"),
         ("POST", "/investigations"),
+        ("GET", "/investigations"),
         ("GET", "/investigations/{investigation_id}"),
         ("GET", "/actions"),
         ("POST", "/actions"),
@@ -48,6 +50,7 @@ def test_routes_wired():
         ("POST", "/sessions/{session_id}/files"),
         ("POST", "/sessions/{session_id}/meta"),
         ("GET", "/sessions/{session_id}"),
+        ("GET", "/sessions/{session_id}/snapshot"),
     ]
     for method, path in expected:
         assert (method, path) in paths, (method, path)
@@ -167,10 +170,36 @@ def test_cors_origins_from_env(monkeypatch):
     assert cors_origins() == ["http://localhost:3000"]
 
 
-def test_investigation_requires_api_key(env, monkeypatch):
-    from fastapi import HTTPException
-
+def test_investigation_demo_mode_without_key(env, monkeypatch):
     monkeypatch.delenv("MODEL_API_KEY", raising=False)
-    with pytest.raises(HTTPException) as exc:
-        inv_api.investigate(inv_api.InvestigateRequest(question="Why no cash?"))
-    assert exc.value.status_code == 503
+    body = inv_api.investigate(
+        inv_api.InvestigateRequest(question="Why no cash?", data_dir=str(DEMO_DIR))
+    )
+    assert body["demo_mode"] is True
+    assert body["status"] == "completed"
+    assert len(body["result"]["findings"]) >= 3
+    assert all(v["status"] == "verified" for v in body["verdicts"])
+
+
+def test_list_investigations_and_templates(env, monkeypatch):
+    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    inv_api.investigate(
+        inv_api.InvestigateRequest(question="Why no cash?", data_dir=str(DEMO_DIR))
+    )
+    listed = inv_api.list_investigations()
+    assert len(listed["investigations"]) == 1
+    assert listed["investigations"][0]["question"] == "Why no cash?"
+    template = uploads_api.template("invoices")
+    assert template["filename"] == "invoices.csv"
+    assert "invoice_id" in template["content"].splitlines()[0]
+
+
+def test_draft_returns_whatsapp_text(env):
+    draft = actions_api.draft(
+        actions_api.DraftRequest(
+            type="payment_reminder", target="Kumasi Mart",
+            amount="12000.00", verified_amount="27000.00",
+        )
+    )
+    assert "Kumasi Mart" in draft["whatsapp_text"]
+    assert "12000.00" in draft["whatsapp_text"]

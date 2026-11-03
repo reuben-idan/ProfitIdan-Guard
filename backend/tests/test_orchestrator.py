@@ -86,6 +86,20 @@ def test_repair_turn_salvages_bad_json(ctx):
     assert result.findings[0]["title"] == "Repaired"
 
 
+def test_markdown_fenced_final_answer_parses(ctx):
+    script = [
+        {
+            "content": 'Here is the result:\n```json\n'
+            + json.dumps({"findings": [{"title": "Fenced"}], "recommended_actions": []})
+            + '\n```',
+            "tool_calls": [],
+        },
+    ]
+    result = run_investigation("Fix it", ctx, FakeClient(script))
+    assert result.completed is True
+    assert result.findings[0]["title"] == "Fenced"
+
+
 def test_step_budget_exhaustion(ctx):
     script = [
         {

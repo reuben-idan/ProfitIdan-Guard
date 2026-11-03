@@ -17,7 +17,8 @@ the owner approves. Demo customer: a fictional Ghanaian distributor (GHS).
 - `backend/finance/` — deterministic tools (stdlib `csv` + `Decimal`):
   `summarize_revenue`, `calculate_product_margins`,
   `reconcile_bank_transactions`, `identify_unpaid_invoices`,
-  `upcoming_payables`, `analyze_inventory_aging`, `forecast_cash_position`.
+  `upcoming_payables`, `analyze_inventory_aging`, `forecast_cash_position`,
+  plus `business_snapshot`, `prioritize_collections`, `customer_exposure`.
 - `backend/verification/` — TradeGuard. `EvidenceRegistry` resolves every
   cited ID to a source row; `verify_finding` recomputes claimed amounts and
   returns `verified` / `unverified` / `contradicted`. `guard_action` gates
@@ -59,4 +60,5 @@ Assumptions are explicit: missing data is reported, never silently zeroed.
 Real: CSV validation, all finance tools, verification, approval workflow,
 audit log, SQLite persistence. Simulated with clear labels: external message
 delivery (`executed_simulated`). Requires `MODEL_API_KEY`: live model runs;
-without it, tests use a scripted fake client and `/investigations` 503s.
+without it, `/investigations`, the CLI, and `demo.py` run the deterministic
+demo-mode review (same tools, same verifier) instead of failing.

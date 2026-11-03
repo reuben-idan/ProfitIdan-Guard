@@ -3,5 +3,37 @@
 @tailwind utilities;
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply bg-slate-100 text-slate-900 antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid theme("colors.emerald.700");
+  outline-offset: 2px;
+}
+
+main {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media print {
+  header nav,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    @apply bg-white;
+  }
+  article {
+    break-inside: avoid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

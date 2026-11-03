@@ -80,14 +80,25 @@ def test_bad_meta_and_unknown_session_rejected(env):
     assert exc.value.status_code == 404
 
 
-def test_cli_requires_api_key(env, monkeypatch, capsys, tmp_path):
+def test_cli_falls_back_to_demo_without_key(env, monkeypatch, capsys, tmp_path):
     import backend.investigate as cli
 
     monkeypatch.delenv("MODEL_API_KEY", raising=False)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(cli, "load_dotenv", lambda *a, **k: False)  # never touch real .env
-    assert cli.main(["--data", str(DEMO_DIR), "Why no cash?"]) == 2
-    assert "MODEL_API_KEY" in capsys.readouterr().err
+    assert cli.main(["--data", str(DEMO_DIR), "Why no cash?"]) == 0
+    captured = capsys.readouterr()
+    assert "demo" in captured.err.lower()
+    assert "VERIFIED" in captured.out
+
+
+def test_session_snapshot_returns_kpis(env):
+    created = sessions_api.create_session(sessions_api.CreateSessionRequest(name="demo"))
+    _assemble_all(created["id"])
+    body = sessions_api.session_snapshot(created["id"])
+    assert body["snapshot"]["cash_on_hand"] == "8000.00"
+    assert body["snapshot"]["forecast_slip"] == "-14000.00"
+    assert body["collections"]["queue"][0]["invoice_id"] == "INV-005"
 
 
 def test_format_summary():

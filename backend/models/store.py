@@ -88,6 +88,14 @@ class Store:
     def get_investigation(self, iid: str) -> dict | None:
         return self._one("SELECT * FROM investigations WHERE id=?", (iid,))
 
+    def list_investigations(self, limit: int = 20) -> list[dict]:
+        rows = self._all(
+            "SELECT id, question, status, created_at FROM investigations "
+            "ORDER BY created_at DESC LIMIT ?",
+            (limit,),
+        )
+        return rows
+
     # -- actions + audit -----------------------------------------------------------
     def draft_action(self, type: str, target: str, amount: str, draft_text: str, finding_ref: str) -> str:
         aid = f"act_{uuid.uuid4().hex[:8]}"

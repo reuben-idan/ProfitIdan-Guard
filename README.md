@@ -37,14 +37,24 @@ npm run dev
 ```
 
 Open http://localhost:3000 in a browser: assemble a dataset (or use the
-demo data), ask the demo question, review evidence with TradeGuard verdicts,
-then approve actions on the Actions page. Set `NEXT_PUBLIC_API_URL` if the
-backend runs elsewhere.
+demo data), ask the demo question by typing or voice, review evidence with
+TradeGuard verdicts, then approve actions on the Actions page. Set
+`NEXT_PUBLIC_API_URL` if the backend runs elsewhere. The UI is mobile-first
+with a bottom nav, live cash snapshot, CSV templates, WhatsApp sharing, and a
+pricing page with an ROI calculator.
 
-Run a live investigation from the CLI (needs `MODEL_API_KEY` in `.env`):
+Run an investigation from the CLI (works without a key in demo mode; set
+`MODEL_API_KEY` in `.env` for the live Muse model):
 
 ```powershell
 python -m backend.investigate --data data/demo "Sales are up but I'm running out of cash. Find the problem and tell me what to do first."
+```
+
+Or run the full story end to end (investigate → verify → draft → approve →
+audit), no servers needed:
+
+```powershell
+python demo.py --yes
 ```
 
 To investigate your own files: create a session (`POST /sessions`), upload
@@ -74,16 +84,22 @@ verifies each finding, and the owner approves a drafted payment reminder.
 
 ## Repo map
 
-- `backend/agent/` — Meta tool-calling loop, tool registry, prompts
+- `backend/agent/` — Meta tool-calling loop, tool registry, prompts,
+  deterministic demo-mode fallback (same tools, no model call)
 - `backend/finance/` — deterministic tools: revenue, margins,
-  reconciliation, receivables, payables, inventory aging, cash forecast
+  reconciliation, receivables, payables, inventory aging, cash forecast,
+  plus KPIs, ranked collections, customer exposure
 - `backend/verification/` — TradeGuard evidence + verifier + action guard
-- `backend/api/` — FastAPI: uploads, sessions, investigations, actions/approvals
-- `backend/investigate.py` — CLI runner for live Meta investigations
+- `backend/api/` — FastAPI: uploads + CSV templates, sessions + live
+  snapshot, investigations (list included), actions/approvals with
+  WhatsApp-ready drafts
+- `backend/investigate.py` — CLI runner (`--demo` for keyless reviews)
+- `demo.py` — full story runner, no servers needed
 - `backend/tests/` — pytest suite with deterministic expected outputs
-- `frontend/` — Next.js app: dataset assembly, investigation review, approvals
+- `frontend/` — Next.js app: mobile-first assembly, voice questions,
+  investigation review, history, approvals, pricing/ROI
 - `data/demo/` — synthetic dataset + expected answers
-- `docs/` — architecture, demo script, frontend plan
+- `docs/` — architecture, demo script, frontend plan, monetization
 
 ## Judging criteria
 

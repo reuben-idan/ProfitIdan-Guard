@@ -14,6 +14,7 @@ import sys
 
 from dotenv import load_dotenv
 
+from .agent.fallback import run_heuristic_investigation
 from .agent.orchestrator import InvestigationResult, MetaClient, run_investigation
 from .agent.tools import ToolContext
 from .verification.verifier import verify_finding
@@ -25,7 +26,8 @@ def format_summary(result: InvestigationResult, verdicts: list[dict]) -> str:
         "Steps (%d): %s" % (len(result.steps), ", ".join(s["tool"] for s in result.steps)),
     ]
     for finding, verdict in zip(result.findings, verdicts):
-        lines.append(f"\n[{verdict['status'].upper()}] {finding.get('title') or '(untitled)'}")
+        severity = f" · {finding.get('severity')}" if finding.get("severity") else ""
+        lines.append(f"\n[{verdict['status'].upper()}{severity}] {finding.get('title') or '(untitled)'}")
         lines.append(f"  {finding.get('claim')}")
     if result.recommended_actions:
         lines.append("\nRecommended actions:")
@@ -47,16 +49,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--data", default="data/demo", help="dataset directory")
     parser.add_argument("--max-steps", type=int, default=8)
     parser.add_argument("--quiet", action="store_true", help="summary only, no JSON dump")
+    parser.add_argument("--demo", action="store_true", help="deterministic review without a model call")
     parser.add_argument("question")
     args = parser.parse_args(argv)
 
     load_dotenv()
-    if not os.getenv("MODEL_API_KEY"):
-        print("MODEL_API_KEY is not set; copy .env.example to .env first.", file=sys.stderr)
-        return 2
+    demo = args.demo or not os.getenv("MODEL_API_KEY")
+    if demo and not args.demo:
+        print("MODEL_API_KEY is not set; running deterministic demo review instead.", file=sys.stderr)
 
     ctx = ToolContext.for_data(args.data)
-    result = run_investigation(args.question, ctx, MetaClient(), max_steps=args.max_steps)
+    if demo:
+        result = run_heuristic_investigation(args.question, ctx)
+    else:
+        result = run_investigation(args.question, ctx, MetaClient(), max_steps=args.max_steps)
     verdicts = [verify_finding(f, ctx.bundle) for f in result.findings]
 
     print(format_summary(result, verdicts))

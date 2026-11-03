@@ -1,19 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { api, type Action } from "@/lib/api";
+import { api, whatsappLink, type Action } from "@/lib/api";
+import { formatMoney } from "@/lib/format";
+
+const STATUS_STYLE: Record<string, string> = {
+  draft: "bg-slate-200 text-slate-800",
+  approved: "bg-emerald-100 text-emerald-900",
+  rejected: "bg-red-100 text-red-900",
+  executed_simulated: "bg-sky-100 text-sky-900",
+};
 
 export default function ApprovalCard({ action, onChange }: { action: Action; onChange: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [trail, setTrail] = useState<{ event: string; actor: string; created_at: string }[] | null>(null);
 
   async function run(fn: () => Promise<unknown>, label: string) {
     setMsg(null);
+    setBusy(true);
     try {
       await fn();
       onChange();
     } catch (err) {
       setMsg(`${label} failed: ${(err as Error).message}`);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -22,44 +34,69 @@ export default function ApprovalCard({ action, onChange }: { action: Action; onC
       setTrail(null);
       return;
     }
-    const res = await api.auditTrail(action.id);
-    setTrail(res.trail);
+    try {
+      const res = await api.auditTrail(action.id);
+      setTrail(res.trail);
+    } catch (err) {
+      setMsg(`Audit failed: ${(err as Error).message}`);
+    }
   }
 
   const isDraft = action.status === "draft";
+  const whatsappText = `Hello ${action.target}, our records show ${formatMoney(action.amount)} outstanding. Please confirm payment this week so we can keep your supply running.`;
   return (
-    <article className="rounded-lg border bg-white p-4">
+    <article className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded bg-slate-200 px-2 py-0.5 text-xs font-bold uppercase">{action.status}</span>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${STATUS_STYLE[action.status] ?? STATUS_STYLE.draft}`}>
+          {action.status.replace(/_/g, " ")}
+        </span>
         <h3 className="font-semibold">
-          {action.type} — {action.target} · GH₵{action.amount}
+          {action.type.replace(/_/g, " ")} — {action.target} · {formatMoney(action.amount)}
         </h3>
       </div>
-      <p className="mt-1 text-sm text-slate-700">{action.draft_text}</p>
-      {msg && <p className="mt-1 text-sm text-red-800">{msg}</p>}
-      <div className="mt-2 flex flex-wrap gap-2 text-sm">
+      <p className="mt-2 text-sm leading-relaxed text-slate-700">{action.draft_text}</p>
+      {action.finding_ref && (
+        <p className="mt-1 text-xs text-slate-500">Linked finding: {action.finding_ref}</p>
+      )}
+      {msg && <p role="alert" className="mt-2 text-sm text-red-900">{msg}</p>}
+      <div className="mt-3 flex flex-wrap gap-2 text-sm">
         <button
-          disabled={!isDraft}
+          type="button"
+          disabled={!isDraft || busy}
           onClick={() => run(() => api.approveAction(action.id, "owner"), "Approve")}
-          className="rounded-md bg-emerald-700 px-3 py-1 text-white hover:bg-emerald-800 disabled:opacity-40"
+          className="min-h-[44px] rounded-md bg-emerald-800 px-4 py-2 font-medium text-white hover:bg-emerald-900 disabled:opacity-40"
         >
           Approve
         </button>
         <button
-          disabled={!isDraft}
+          type="button"
+          disabled={!isDraft || busy}
           onClick={() => run(() => api.rejectAction(action.id, "owner"), "Reject")}
-          className="rounded-md border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-40"
+          className="min-h-[44px] rounded-md border border-slate-300 px-4 py-2 hover:bg-slate-100 disabled:opacity-40"
         >
           Reject
         </button>
         <button
-          disabled={action.status !== "approved"}
+          type="button"
+          disabled={action.status !== "approved" || busy}
           onClick={() => run(() => api.executeAction(action.id), "Execute")}
-          className="rounded-md border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-40"
+          className="min-h-[44px] rounded-md border border-slate-300 px-4 py-2 hover:bg-slate-100 disabled:opacity-40"
         >
           Execute (simulated)
         </button>
-        <button onClick={showTrail} className="px-2 py-1 text-emerald-700 underline-offset-2 hover:underline">
+        <a
+          href={whatsappLink(whatsappText)}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex min-h-[44px] items-center rounded-md border border-slate-300 px-4 py-2 hover:bg-slate-100"
+        >
+          Open in WhatsApp
+        </a>
+        <button
+          type="button"
+          onClick={showTrail}
+          className="min-h-[44px] px-2 py-2 text-emerald-800 underline-offset-2 hover:underline"
+        >
           {trail ? "Hide audit trail" : "Audit trail"}
         </button>
       </div>
@@ -67,7 +104,7 @@ export default function ApprovalCard({ action, onChange }: { action: Action; onC
         <ul className="mt-2 space-y-1 rounded-md bg-slate-100 p-3 text-sm">
           {trail.map((t, i) => (
             <li key={i}>
-              {t.event} — {t.actor || "system"} · {t.created_at}
+              <span className="font-mono text-xs">{t.event}</span> — {t.actor || "system"} · {t.created_at}
             </li>
           ))}
         </ul>

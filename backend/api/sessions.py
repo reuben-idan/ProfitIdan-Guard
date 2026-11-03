@@ -12,6 +12,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from ..agent.tools import ToolContext, run_tool
 from ..finance.datasets import TABLE_FILES
 from ..models.store import Store
 from .uploads import REQUIRED_COLUMNS, validate_csv
@@ -101,6 +102,24 @@ def set_session_meta(session_id: str, req: SessionMetaRequest) -> dict:
     dest = Path(_sessions_root()) / session_id / "meta.json"
     dest.write_text(json.dumps(meta), encoding="utf-8")
     return {"status": "ok", "path": str(dest)}
+
+
+@router.get("/{session_id}/snapshot")
+def session_snapshot(session_id: str, horizon_days: int = 14) -> dict:
+    """Dashboard KPIs for a session without running the model."""
+    _get_session_or_404(session_id)
+    session_dir = Path(_sessions_root()) / session_id
+    if not (session_dir / "meta.json").exists():
+        raise HTTPException(status_code=400, detail="session meta is not set yet")
+    try:
+        ctx = ToolContext.for_data(str(session_dir))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=f"session files incomplete: {exc}")
+    snapshot = run_tool(ctx, "business_snapshot", {"horizon_days": horizon_days})
+    queue = run_tool(ctx, "prioritize_collections", {"horizon_days": horizon_days})
+    if snapshot.get("status") != "success":
+        raise HTTPException(status_code=400, detail=snapshot.get("error", "snapshot failed"))
+    return {"id": session_id, "snapshot": snapshot["result"], "collections": queue.get("result", {})}
 
 
 @router.get("/{session_id}")

@@ -123,9 +123,27 @@ def run_investigation(
     return result
 
 
+def _extract_json(content: str) -> str:
+    """Tolerate markdown-fenced or prose-wrapped final answers."""
+    text = (content or "").strip()
+    if "```" in text:
+        start = text.find("```")
+        end = text.rfind("```")
+        if end > start:
+            inner = text[start:end].split("\n", 1)
+            text = inner[1] if len(inner) > 1 else inner[0]
+            text = text.strip()
+    if not text.startswith("{"):
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end > start:
+            text = text[start : end + 1]
+    return text
+
+
 def _finish(result: InvestigationResult, content: str) -> bool:
     try:
-        final = json.loads(content)
+        final = json.loads(_extract_json(content))
     except (json.JSONDecodeError, AttributeError, TypeError):
         return False
     if not isinstance(final, dict) or "findings" not in final:

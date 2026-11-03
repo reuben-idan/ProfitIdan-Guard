@@ -52,10 +52,13 @@ def identify_unpaid_invoices(bundle: DataBundle, horizon_days: int = 14) -> dict
         "status": "success",
         "result": {
             "as_of": bundle.meta["as_of"],
+            "horizon_days": horizon_days,
             "overdue": sorted(overdue, key=lambda r: r["days_overdue"], reverse=True),
             "overdue_total": money(overdue_total),
             "due_within_14d": due_soon,
             "due_within_14d_total": money(due_soon_total),
+            "due_within_horizon": due_soon,
+            "due_within_horizon_total": money(due_soon_total),
             "total_outstanding": money(outstanding),
         },
         "evidence_ids": evidence_ids,
@@ -108,7 +111,7 @@ def forecast_cash_position(bundle: DataBundle, horizon_days: int = 14) -> dict:
 
     receivables = identify_unpaid_invoices(bundle, horizon_days)["result"]
     payables = upcoming_payables(bundle, horizon_days)["result"]
-    inflow = parse_decimal(receivables["due_within_14d_total"])
+    inflow = parse_decimal(receivables["due_within_horizon_total"])
     outflow = parse_decimal(payables["total_due"])
 
     return {
@@ -128,7 +131,7 @@ def forecast_cash_position(bundle: DataBundle, horizon_days: int = 14) -> dict:
         },
         "evidence_ids": (
             [t["txn_id"] for t in bundle.table("bank")]
-            + [r["invoice_id"] for r in receivables["due_within_14d"]]
+            + [r["invoice_id"] for r in receivables["due_within_horizon"]]
             + [b["bill_id"] for b in payables["bills_due"]]
         ),
         "assumptions": [

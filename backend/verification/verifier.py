@@ -139,16 +139,19 @@ def verify_finding(finding: dict, source: DataBundle | ToolContext) -> dict:
     return {"title": finding.get("title", ""), "status": status, "checks": checks}
 
 
-def guard_action(amount: str, verified_amount: str, approved: bool) -> dict:
+def guard_action(
+    amount: str, verified_amount: str, approved: bool, currency: str = "GHS"
+) -> dict:
     """Gate a consequential action: it needs a verified ceiling and explicit approval."""
     value = parse_decimal(amount)
     ceiling = parse_decimal(verified_amount)
+    symbol = "GH₵" if currency.upper() == "GHS" else f"{currency.upper()} "
     if value <= 0:
         return {"allowed": False, "reason": "amount must be positive"}
     if value > ceiling:
         return {
             "allowed": False,
-            "reason": f"GH₵{money(value)} exceeds verified GH₵{money(ceiling)}",
+            "reason": f"{symbol}{money(value)} exceeds verified {symbol}{money(ceiling)}",
         }
     if not approved:
         return {"allowed": False, "reason": "owner approval required before execution"}

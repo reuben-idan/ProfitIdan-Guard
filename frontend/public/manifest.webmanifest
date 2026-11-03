@@ -1,0 +1,12 @@
+{
+  "name": "ProfitPilot AI — the AI CFO for distributors",
+  "short_name": "ProfitPilot",
+  "description": "Verified profit-leak investigations and cash actions for distributors.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#065f46",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

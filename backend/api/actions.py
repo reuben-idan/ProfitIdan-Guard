@@ -30,12 +30,28 @@ DRAFT_TEMPLATES = {
 }
 
 
+WHATSAPP_TEMPLATES = {
+    "payment_reminder": (
+        "Hello {target}, this is a friendly reminder that {symbol}{amount} "
+        "is outstanding (ref: {finding_ref}). Please confirm payment this week."
+    ),
+    "supplier_review": (
+        "Review due: {symbol}{amount} payable to {target} in the forecast window. "
+        "Confirm coverage or renegotiate terms."
+    ),
+    "purchase_hold": (
+        "Hold new orders for {target} ({symbol}{amount} tied up) until stock clears."
+    ),
+}
+
+
 class DraftRequest(BaseModel):
     type: str
     target: str
     amount: str
     finding_ref: str = ""
     verified_amount: str
+    currency: str = "GHS"
 
 
 class ApproveRequest(BaseModel):
@@ -50,12 +66,17 @@ def _store() -> Store:
 def draft(req: DraftRequest) -> dict:
     if req.type not in DRAFT_TEMPLATES:
         raise HTTPException(status_code=400, detail=f"unknown action type: {req.type}")
-    gate = guard_action(req.amount, req.verified_amount, approved=False)
+    gate = guard_action(req.amount, req.verified_amount, approved=False, currency=req.currency)
     if "exceeds verified" in gate["reason"]:
         raise HTTPException(status_code=400, detail=gate["reason"])
     text = DRAFT_TEMPLATES[req.type].format(target=req.target, amount=req.amount)
+    symbol = "GH₵" if req.currency.upper() == "GHS" else f"{req.currency.upper()} "
+    whatsapp = WHATSAPP_TEMPLATES[req.type].format(
+        target=req.target, amount=req.amount, symbol=symbol,
+        finding_ref=req.finding_ref or req.type,
+    )
     aid = _store().draft_action(req.type, req.target, req.amount, text, req.finding_ref)
-    return {"id": aid, "status": "draft", "draft_text": text, "gate": gate}
+    return {"id": aid, "status": "draft", "draft_text": text, "whatsapp_text": whatsapp, "gate": gate}
 
 
 @router.post("/{action_id}/approve")
