@@ -113,10 +113,10 @@ export default function Home() {
     setBusy(true);
     setRunMode(fast);
     setMsg(null);
-    // The free-tier server can be slow to wake; stop waiting before the
-    // server's own worker timeout so the user gets words, not a hang.
+    // The free-tier server can be slow; stop waiting before the request
+    // is hopeless so the user gets words, not a hang.
     const ctrl = new AbortController();
-    const timer = window.setTimeout(() => ctrl.abort(), 150000);
+    const timer = window.setTimeout(() => ctrl.abort(), 280000);
     try {
       const data_dir = useDemo || !session ? "data/demo" : session.path;
       const res = await api.investigate(question, data_dir, fast ? true : undefined, ctrl.signal);

@@ -41,7 +41,7 @@ export default function InvestigatingOverlay({ fast }: { fast: boolean }) {
         <p className="mt-1 text-sm text-ink/60">
           {fast
             ? "Instant review — usually just a few seconds."
-            : "Full AI investigation — usually about a minute."}{" "}
+            : "Full AI investigation — usually one to three minutes."}{" "}
           {elapsed > 0 && <span className="tabular-nums">({elapsed}s)</span>}
         </p>
         <ol className="mt-4 space-y-2.5">
