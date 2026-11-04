@@ -3,7 +3,7 @@
 [![Meta Global AI Hackathon](https://img.shields.io/badge/Meta_Global_AI_Hackathon-2026-0467DF)](https://cerebralvalley.ai/e/meta-ai-developer-hackathon)
 [![Build for Your World](https://img.shields.io/badge/Build_for_Your_World-Indie_Track-0e4a34)](docs/submission.md)
 [![Muse Spark](https://img.shields.io/badge/Muse_Spark-1.3-0467DF)](https://dev.meta.ai/models/muse-spark)
-[![Tests](https://img.shields.io/badge/pytest-72_passed-1c6a4c)](backend/tests)
+[![Tests](https://img.shields.io/badge/pytest-81_passed-1c6a4c)](backend/tests)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](backend)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](frontend)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi)](backend/main.py)
@@ -134,16 +134,17 @@ Paste-ready form answers and the pre-flight checklist live in
   deterministic demo-mode fallback (same tools, no model call)
 - `backend/finance/` — revenue, margins, reconciliation, receivables,
   payables, inventory aging, cash forecast, KPIs, ranked collections,
-  customer exposure (all Decimal, stdlib-only)
+  customer exposure, chart series (all Decimal, stdlib-only)
 - `backend/verification/` — TradeGuard evidence + verifier + action guard
 - `backend/api/` — FastAPI: uploads + CSV templates, sessions + live
-  snapshot, session-backed investigations, actions/approvals with
-  WhatsApp-ready drafts
+  snapshot, session-backed investigations, chart series per session and per
+  investigation, actions/approvals with WhatsApp-ready drafts
 - `backend/investigate.py` — CLI runner (`--demo` for keyless reviews)
 - `demo.py` — full story runner, no servers needed
-- `backend/tests/` — 72-test pytest suite with deterministic expected outputs
+- `backend/tests/` — 81-test pytest suite with deterministic expected outputs
 - `frontend/` — Next.js app: mobile-first assembly, voice questions,
-  investigation review, history, approvals, pricing/ROI
+  investigation review, live insight charts (SVG, downloadable),
+  history, approvals, pricing/ROI
 - `data/demo/` — synthetic dataset + expected answers
 - `docs/` — architecture, demo script, submission drafts, monetization
 

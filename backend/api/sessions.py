@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ..agent.tools import ToolContext, run_tool
+from ..finance.charts import build_charts
 from ..finance.datasets import TABLE_FILES
 from ..models.store import Store
 from .uploads import (
@@ -146,6 +147,31 @@ def session_snapshot(session_id: str, horizon_days: int = 14) -> dict:
     if snapshot.get("status") != "success":
         raise HTTPException(status_code=400, detail=snapshot.get("error", "snapshot failed"))
     return {"id": session_id, "snapshot": snapshot["result"], "collections": queue.get("result", {})}
+
+
+@router.get("/{session_id}/charts")
+def session_charts(session_id: str, horizon_days: int = 14) -> dict:
+    """Chart-ready series for insight visualizations.
+
+    The id "demo" resolves to the bundled demo dataset so the home page can
+    chart without a session; anything else must be a complete session.
+    """
+    horizon = min(max(horizon_days, 1), 90)
+    if session_id == "demo":
+        try:
+            ctx = ToolContext.for_data(os.getenv("PROFITPILOT_DATA", "data/demo"))
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=400, detail=f"demo dataset missing: {exc}")
+        return {"id": "demo", "charts": build_charts(ctx.bundle, horizon)}
+    _get_session_or_404(session_id)
+    session_dir = Path(_sessions_root()) / session_id
+    if not (session_dir / "meta.json").exists():
+        raise HTTPException(status_code=400, detail="session meta is not set yet")
+    try:
+        ctx = ToolContext.for_data(str(session_dir))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=f"session files incomplete: {exc}")
+    return {"id": session_id, "charts": build_charts(ctx.bundle, horizon)}
 
 
 @router.get("/{session_id}")

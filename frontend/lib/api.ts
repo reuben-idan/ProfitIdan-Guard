@@ -80,6 +80,7 @@ export interface InvestigationRecord {
   question: string;
   status: string;
   demo_mode?: boolean;
+  dataset_ref?: string;
   result: InvestigationResult;
   verdicts: Verdict[];
 }
@@ -133,6 +134,72 @@ export interface CollectionItem {
   suggested_type: string;
   expected_impact: string;
   reason: string;
+}
+
+export interface RunwayPoint {
+  day: number;
+  date: string;
+  on_time: string;
+  slip: string;
+  collected_cum: string;
+  paid_cum: string;
+}
+
+export interface ChartsPayload {
+  as_of: string;
+  horizon_days: number;
+  currency: string;
+  runway: {
+    points: RunwayPoint[];
+    starting_cash: string;
+    on_time_zero_crossing_day: number | null;
+    on_time_zero_crossing_date: string | null;
+    slip_zero_crossing_day: number | null;
+    slip_zero_crossing_date: string | null;
+  };
+  revenue_trend: {
+    months: { month: string; revenue: string; sales_count: number; growth_pct: string | null }[];
+  };
+  margins: {
+    month: string;
+    threshold: string;
+    products: {
+      product_id: string;
+      revenue: string;
+      gross_profit: string;
+      margin_pct: string;
+      below_threshold: boolean;
+    }[];
+    totals: {
+      revenue: string;
+      cogs: string;
+      gross_profit: string;
+      blended_margin_pct: string;
+    } | null;
+    note?: string;
+  };
+  collections: { queue: CollectionItem[]; queue_total: string; watch_count: number };
+  leaks: { label: string; amount: string }[];
+  inventory: {
+    products: {
+      product_id: string;
+      stock_value: string;
+      status: string;
+      days_of_cover: number | null;
+    }[];
+    total_stock_value: string;
+  };
+  exposure: {
+    customers: {
+      customer: string;
+      outstanding: string;
+      share_pct: string;
+      risk: string;
+      max_days_overdue: number;
+    }[];
+    total_outstanding: string;
+  };
+  assumptions: string[];
 }
 
 export interface Action {
@@ -190,6 +257,14 @@ export const api = {
       }
     ),
   getInvestigation: (id: string) => get<InvestigationRecord>(`/investigations/${id}`),
+  sessionCharts: (sessionId: string, horizonDays = 14) =>
+    get<{ id: string; charts: ChartsPayload }>(
+      `/sessions/${sessionId}/charts?horizon_days=${horizonDays}`
+    ),
+  investigationCharts: (id: string, horizonDays = 14) =>
+    get<{ id: string; charts: ChartsPayload }>(
+      `/investigations/${id}/charts?horizon_days=${horizonDays}`
+    ),
   listInvestigations: () => get<{ investigations: InvestigationSummary[] }>("/investigations"),
   draftAction: (draft: {
     type: string;

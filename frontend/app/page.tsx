@@ -7,6 +7,7 @@ import { api, type CollectionItem, type SessionStatus, type SnapshotKpis } from 
 import { formatMoney } from "@/lib/format";
 import CashOutlook from "@/components/CashOutlook";
 import FileDrop, { KindStatus } from "@/components/FileDrop";
+import InsightCharts from "@/components/InsightCharts";
 import InvestigatingOverlay from "@/components/InvestigatingOverlay";
 import KpiCard from "@/components/KpiCard";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
@@ -408,10 +409,13 @@ export default function Home() {
             </button>
 
             {useDemo && (
-              <p className="mt-3 rounded-xl border border-pine-700/20 bg-pine-50/80 px-3.5 py-2.5 text-[13px] leading-relaxed text-pine-900">
-                Demo mode runs the full pipeline — 10 finance tools + TradeGuard verification — on
-                bundled data. Skip uploads and ask below.
-              </p>
+              <div className="mt-3 space-y-3">
+                <p className="rounded-xl border border-pine-700/20 bg-pine-50/80 px-3.5 py-2.5 text-[13px] leading-relaxed text-pine-900">
+                  Demo mode runs the full pipeline — 10 finance tools + TradeGuard verification — on
+                  bundled data. Skip uploads and ask below.
+                </p>
+                <InsightCharts source={{ kind: "session", id: "demo" }} question={question} />
+              </div>
             )}
 
             {!useDemo && !session && (
@@ -530,6 +534,9 @@ export default function Home() {
                         <Money amount={queue[0].balance} currency={snapshot.currency} className="font-bold" /> ({queue[0].reason})
                       </p>
                     )}
+                    <div className="mt-3">
+                      <InsightCharts source={{ kind: "session", id: session.id }} question={question} />
+                    </div>
                   </div>
                 )}
               </div>

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, type InvestigationRecord } from "@/lib/api";
 import CountUp from "@/components/CountUp";
+import InsightCharts from "@/components/InsightCharts";
 import InvestigationPanel from "@/components/InvestigationPanel";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import { ShareActions } from "@/components/FileDrop";
@@ -85,6 +86,7 @@ export default function InvestigationPage() {
         )}
       </section>
       <ShareActions title={`ProfitPilot review: ${record.question}`} text={summary || "No findings."} />
+      <InsightCharts source={{ kind: "investigation", id: params.id }} question={record.question} />
       <InvestigationPanel record={record} />
     </div>
   );

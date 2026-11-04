@@ -40,6 +40,7 @@ def test_routes_wired():
         ("POST", "/investigations"),
         ("GET", "/investigations"),
         ("GET", "/investigations/{investigation_id}"),
+        ("GET", "/investigations/{investigation_id}/charts"),
         ("GET", "/actions"),
         ("POST", "/actions"),
         ("POST", "/actions/{action_id}/approve"),
@@ -51,6 +52,7 @@ def test_routes_wired():
         ("POST", "/sessions/{session_id}/meta"),
         ("GET", "/sessions/{session_id}"),
         ("GET", "/sessions/{session_id}/snapshot"),
+        ("GET", "/sessions/{session_id}/charts"),
     ]
     for method, path in expected:
         assert (method, path) in paths, (method, path)

@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS uploads (
 );
 CREATE TABLE IF NOT EXISTS investigations (
     id TEXT PRIMARY KEY, question TEXT, result TEXT, verdicts TEXT,
-    status TEXT, created_at TEXT, demo_mode INTEGER DEFAULT 0
+    status TEXT, created_at TEXT, demo_mode INTEGER DEFAULT 0,
+    dataset_ref TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS actions (
     id TEXT PRIMARY KEY, type TEXT, target TEXT, amount TEXT,
@@ -45,13 +46,17 @@ class Store:
             # WAL lets concurrent gunicorn workers read during writes
             # instead of hitting "database is locked" under rapid clicks.
             conn.execute("PRAGMA journal_mode=WAL")
-        # Backfill for databases created before demo_mode existed.
-        try:
-            with self._connect() as conn:
-                conn.execute("ALTER TABLE investigations ADD COLUMN demo_mode INTEGER DEFAULT 0")
-        except sqlite3.OperationalError as exc:
-            if "duplicate column" not in str(exc).lower():
-                raise
+        # Backfill for databases created before demo_mode / dataset_ref existed.
+        for ddl in (
+            "ALTER TABLE investigations ADD COLUMN demo_mode INTEGER DEFAULT 0",
+            "ALTER TABLE investigations ADD COLUMN dataset_ref TEXT DEFAULT ''",
+        ):
+            try:
+                with self._connect() as conn:
+                    conn.execute(ddl)
+            except sqlite3.OperationalError as exc:
+                if "duplicate column" not in str(exc).lower():
+                    raise
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path, timeout=30)
@@ -91,12 +96,27 @@ class Store:
         return uid
 
     def save_investigation(
-        self, question: str, result: dict, verdicts: list, status: str, demo_mode: bool = False
+        self,
+        question: str,
+        result: dict,
+        verdicts: list,
+        status: str,
+        demo_mode: bool = False,
+        dataset_ref: str = "",
     ) -> str:
         iid = f"inv_{uuid.uuid4().hex[:8]}"
         self._write(
-            "INSERT INTO investigations VALUES (?,?,?,?,?,?,?)",
-            (iid, question, json.dumps(result), json.dumps(verdicts), status, _now(), int(bool(demo_mode))),
+            "INSERT INTO investigations VALUES (?,?,?,?,?,?,?,?)",
+            (
+                iid,
+                question,
+                json.dumps(result),
+                json.dumps(verdicts),
+                status,
+                _now(),
+                int(bool(demo_mode)),
+                dataset_ref,
+            ),
         )
         return iid
 

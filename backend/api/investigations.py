@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from ..agent.fallback import run_heuristic_investigation
 from ..agent.orchestrator import MetaClient, run_investigation
 from ..agent.tools import ToolContext
+from ..finance.charts import build_charts
 from ..finance.datasets import TABLE_FILES
 from ..models.store import Store
 from ..verification.verifier import verify_finding
@@ -148,7 +149,9 @@ def investigate(req: InvestigateRequest) -> dict:
             raise HTTPException(status_code=502, detail=detail)
     verdicts = [verify_finding(f, ctx.bundle) for f in result.findings]
     status = "completed" if result.completed else "incomplete"
-    iid = _store().save_investigation(req.question, result.to_dict(), verdicts, status, demo_mode)
+    iid = _store().save_investigation(
+        req.question, result.to_dict(), verdicts, status, demo_mode, _dataset_ref(req, data_dir)
+    )
     return {
         "id": iid,
         "status": status,
@@ -156,6 +159,58 @@ def investigate(req: InvestigateRequest) -> dict:
         "result": result.to_dict(),
         "verdicts": verdicts,
     }
+
+
+def _dataset_ref(req: InvestigateRequest, data_dir: str) -> str:
+    """Short stable pointer so charts can re-resolve the same dataset later."""
+    if req.session_id:
+        return f"session:{req.session_id.strip()}"
+    try:
+        demo = Path(os.getenv("PROFITPILOT_DATA", "data/demo")).resolve()
+        if Path(data_dir).resolve() == demo:
+            return "demo"
+    except Exception:
+        pass
+    return f"dir:{data_dir}"
+
+
+def _charts_bundle(ref: str) -> ToolContext:
+    if not ref:
+        raise HTTPException(
+            status_code=400,
+            detail="Charts are unavailable for investigations run before charts "
+            "existed — the findings and verdicts above are unaffected.",
+        )
+    if ref == "demo":
+        data_dir = os.getenv("PROFITPILOT_DATA", "data/demo")
+    elif ref.startswith("session:"):
+        data_dir = str(_sessions_root() / ref[len("session:"):])
+    elif ref.startswith("dir:"):
+        data_dir = ref[len("dir:"):]
+        candidate = Path(data_dir)
+        if candidate.is_absolute() or ".." in candidate.parts:
+            try:
+                resolved = candidate.resolve()
+                allowed = [
+                    Path("data/demo").resolve(),
+                    Path(os.getenv("PROFITPILOT_UPLOADS", "data/uploads")).resolve(),
+                ]
+                if not any(resolved == a or a in resolved.parents for a in allowed):
+                    raise HTTPException(status_code=400, detail="Stored dataset is outside datasets.")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=400, detail="Stored dataset is invalid.")
+    else:
+        raise HTTPException(status_code=400, detail="Stored dataset reference is invalid.")
+    try:
+        return ToolContext.for_data(data_dir)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=400,
+            detail="Charts expired with the dataset — free-tier restarts wipe uploaded "
+            "sessions. The saved findings and verdicts above are unaffected.",
+        )
 
 
 @router.get("")
@@ -173,3 +228,13 @@ def get_investigation(investigation_id: str) -> dict:
         "result": json.loads(record["result"]),
         "verdicts": json.loads(record["verdicts"]),
     }
+
+
+@router.get("/{investigation_id}/charts")
+def investigation_charts(investigation_id: str, horizon_days: int = 14) -> dict:
+    """Chart series for a past investigation, re-resolved from its dataset."""
+    record = _store().get_investigation(investigation_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="investigation not found")
+    ctx = _charts_bundle(record.get("dataset_ref") or "")
+    return {"id": investigation_id, "charts": build_charts(ctx.bundle, min(max(horizon_days, 1), 90))}

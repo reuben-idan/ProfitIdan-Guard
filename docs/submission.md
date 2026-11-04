@@ -54,7 +54,7 @@ deterministic Python computes every number.
 
 Build speed: Muse Code (agentic CLI) authored the full stack during the
 hackathon — FastAPI backend, 10 finance tools, TradeGuard verifier, Next.js
-mobile-first frontend, and the 72-test pytest suite — with human review on
+mobile-first frontend, and the 81-test pytest suite — with human review on
 every diff.
 
 Credits: $150 Meta Model API participant credits fund the live Full AI
@@ -100,7 +100,7 @@ so a refresh never orphans uploads.
 - **Recommend Meta Model API to another team:** Yes, especially for agentic
   tool-use workloads where outputs must be verifiable.
 - **Recommend Muse Code to another team:** Yes — full-stack agent (FastAPI +
-  Next.js + 72 tests) built inside the 10-day window with human review.
+  Next.js + 81 tests) built inside the 10-day window with human review.
 - **Biggest obstacle:** Free-tier production hardening under deadline (see
   above): ephemeral disks, cold starts, checklist-driven UX recovery.
 - **Meta vs other models on this work:** Stronger at sustained tool-use
