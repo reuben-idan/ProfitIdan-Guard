@@ -84,12 +84,35 @@ investigations to server-resolved session IDs with checklist errors naming
 exactly which files are still missing, and persisted sessions in the browser
 so a refresh never orphans uploads.
 
-## Meta Model API likelihood / opinion (suggested)
+## Partner tech feedback (150 chars max)
 
-- Build with again: very likely — OpenAI-compatible tool calling meant the
-  agent loop worked first try.
-- Opinion: positive — model quality on multi-step financial reasoning is
-  strong; a Frankfurt-egress 404 on the model ID cost us a redeploy to
-  Oregon (documented in `render.yaml`), so region transparency could improve.
-- Recommend to others: yes for agentic tool-use workloads with verifiable
-  outputs.
+"Built entirely on Meta Model API + Muse Code; did not need Baseten/Modal/Fireworks credits for this workload."
+
+## Remaining form fields (suggested answers — adjust to taste)
+
+- **How likely to build with Meta Model API:** Very likely — the
+  OpenAI-compatible tool-calling interface meant the agent loop worked on the
+  first try, and reasoning quality held up over 8-step investigations.
+- **Overall opinion of Meta Model API:** Positive — strong multi-step
+  financial reasoning; one region-specific 404 on the model ID cost a
+  redeploy (Oregon works; documented in `render.yaml`), so region/model
+  transparency could improve.
+- **Recommend Meta Model API to another team:** Yes, especially for agentic
+  tool-use workloads where outputs must be verifiable.
+- **Recommend Muse Code to another team:** Yes — full-stack agent (FastAPI +
+  Next.js + 72 tests) built inside the 10-day window with human review.
+- **Biggest obstacle:** Free-tier production hardening under deadline (see
+  above): ephemeral disks, cold starts, checklist-driven UX recovery.
+- **Meta vs other models on this work:** Stronger at sustained tool-use
+  planning than the general chat models tried — it kept hypotheses,
+  evidence IDs, and amount-proof contracts consistent across rounds instead
+  of drifting into summary prose.
+- **What matters most when choosing a model/tool:** Verifiable outputs
+  (tool calling + structured JSON reliability), latency on hosted tiers,
+  and credit/quota transparency for demos.
+- **Hardest part of switching models/tools:** Re-validating the agent
+  contract — prompt behavior, tool-call schema discipline, and the
+  verifier's tolerance for each model's JSON quirks.
+- **What would stop production use of Meta's models:** Nothing structural
+  today; watch items are regional availability of model IDs, rate limits at
+  scale, and persistent-memory story for multi-session business context.
