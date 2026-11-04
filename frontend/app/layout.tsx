@@ -26,11 +26,10 @@ const NAV = [
 
 function BrandMark() {
   return (
-    <span
-      aria-hidden="true"
-      className="flex h-8 w-8 items-center justify-center rounded-lg bg-pine-900 font-display text-lg font-bold text-white"
-    >
-      P
+    <span aria-hidden="true" className="ring-conic rounded-lg p-[2px]">
+      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-pine-950 font-display text-base font-bold text-white">
+        P
+      </span>
     </span>
   );
 }
@@ -77,7 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </main>
         <footer className="border-t border-ink/10 bg-white">
           <div className="mx-auto flex max-w-5xl flex-col gap-1 px-4 py-5 text-xs leading-relaxed text-ink/55 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <p>ProfitPilot AI — verified answers for distributors. Demo data is fictional.</p>
+            <p>ProfitPilot AI — Muse Spark reasoning, TradeGuard-verified. Demo data is fictional.</p>
             <p>Nothing executes without owner approval. Delivery is simulated in the demo.</p>
           </div>
           <div className="h-[env(safe-area-inset-bottom)] sm:hidden" />

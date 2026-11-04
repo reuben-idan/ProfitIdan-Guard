@@ -171,10 +171,23 @@ export const api = {
     ),
   template: (kind: string) =>
     get<{ kind: string; filename: string; content: string }>(`/uploads/templates/${kind}`),
-  investigate: (question: string, data_dir?: string, demo_mode?: boolean, signal?: AbortSignal) =>
+  investigate: (
+    question: string,
+    opts?: { data_dir?: string; session_id?: string; demo_mode?: boolean },
+    signal?: AbortSignal
+  ) =>
     request<{ id: string; status: string; demo_mode: boolean; result: InvestigationResult; verdicts: Verdict[] }>(
       "/investigations",
-      { method: "POST", body: JSON.stringify({ question, data_dir, demo_mode }), signal }
+      {
+        method: "POST",
+        body: JSON.stringify({
+          question,
+          data_dir: opts?.data_dir,
+          session_id: opts?.session_id,
+          demo_mode: opts?.demo_mode,
+        }),
+        signal,
+      }
     ),
   getInvestigation: (id: string) => get<InvestigationRecord>(`/investigations/${id}`),
   listInvestigations: () => get<{ investigations: InvestigationSummary[] }>("/investigations"),
