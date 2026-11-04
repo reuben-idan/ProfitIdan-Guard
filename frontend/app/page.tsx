@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, type CollectionItem, type SessionStatus, type SnapshotKpis } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
+import CashOutlook from "@/components/CashOutlook";
 import FileDrop, { KindStatus } from "@/components/FileDrop";
+import InvestigatingOverlay from "@/components/InvestigatingOverlay";
 import KpiCard from "@/components/KpiCard";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import VoiceInput from "@/components/VoiceInput";
@@ -46,7 +48,18 @@ export default function Home() {
   const [useDemo, setUseDemo] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [runMode, setRunMode] = useState<boolean | null>(null);
+  const [showOverlay, setShowOverlay] = useState(false);
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
+
+  useEffect(() => {
+    if (!busy) {
+      setShowOverlay(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowOverlay(true), 600);
+    return () => window.clearTimeout(timer);
+  }, [busy]);
 
   useEffect(() => {
     api.health().then(() => setBackendOk(true)).catch(() => setBackendOk(false));
@@ -98,19 +111,32 @@ export default function Home() {
 
   async function investigate(fast: boolean) {
     setBusy(true);
+    setRunMode(fast);
     setMsg(null);
+    // The free-tier server can be slow to wake; stop waiting before the
+    // server's own worker timeout so the user gets words, not a hang.
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(() => ctrl.abort(), 150000);
     try {
       const data_dir = useDemo || !session ? "data/demo" : session.path;
-      const res = await api.investigate(question, data_dir, fast ? true : undefined);
+      const res = await api.investigate(question, data_dir, fast ? true : undefined, ctrl.signal);
       router.push(`/investigations/${res.id}`);
     } catch (err) {
-      setMsg(`Investigation failed: ${(err as Error).message}`);
+      setMsg(
+        err instanceof DOMException && err.name === "AbortError"
+          ? "Investigation timed out — the server may still be waking up. Try Instant review, which answers in seconds."
+          : `Investigation failed: ${(err as Error).message}`
+      );
       setBusy(false);
+      setRunMode(null);
+    } finally {
+      window.clearTimeout(timer);
     }
   }
 
   return (
     <div className="space-y-5 sm:space-y-7">
+      {showOverlay && runMode !== null && <InvestigatingOverlay fast={runMode} />}
       <section className="animate-rise pb-1 pt-1 sm:pt-3">
         <Pill tone={backendOk === false ? "bad" : "ok"}>
           <LiveDot on={backendOk !== false} />
@@ -238,6 +264,14 @@ export default function Home() {
             {snapshot && (
               <div>
                 <h3 className="text-sm font-bold">Live snapshot — no AI call needed</h3>
+                <div className="mt-2.5">
+                  <CashOutlook
+                    cash={snapshot.cash_on_hand}
+                    onTime={snapshot.forecast_on_time}
+                    slip={snapshot.forecast_slip}
+                    currency={snapshot.currency}
+                  />
+                </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
                   <KpiCard label="Cash on hand" value={formatMoney(snapshot.cash_on_hand, snapshot.currency)} />
                   <KpiCard label="Overdue" value={formatMoney(snapshot.overdue_total, snapshot.currency)} tone="bad" sub="collect first" />
@@ -328,7 +362,7 @@ export default function Home() {
           <ol className="mt-2 divide-y divide-ink/10 text-sm leading-relaxed">
             <li className="flex gap-3 py-2.5">
               <span className="font-display font-bold text-pine-700" aria-hidden="true">1</span>
-              <span><strong>Bring your records.</strong> <span className="text-ink/70">Upload five CSVs or start with the demo. Bad rows are flagged, never faked.</span></span>
+              <span><strong>Bring your records.</strong> <span className="text-ink/70">Upload five files (CSV, TSV, JSON, or Excel) or start with the demo. Bad rows are flagged, never faked.</span></span>
             </li>
             <li className="flex gap-3 py-2.5">
               <span className="font-display font-bold text-pine-700" aria-hidden="true">2</span>

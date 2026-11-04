@@ -6,6 +6,15 @@ import { btnOutline, btnPrimary } from "./ui";
 
 export const DATASET_KINDS = ["invoices", "supplier_bills", "bank", "sales", "inventory"] as const;
 
+function bufferToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
 const KIND_HELP: Record<string, string> = {
   invoices: "Customer invoices with amounts paid",
   supplier_bills: "Supplier bills with amounts paid",
@@ -77,8 +86,10 @@ export default function FileDrop({
     setBusy(true);
     setReport(null);
     try {
-      const content = await file.text();
-      const res = await api.uploadFile(sessionId, file.name, kind, content);
+      const isWorkbook = /\.xlsx$/i.test(file.name);
+      const content = isWorkbook ? "" : await file.text();
+      const contentBase64 = isWorkbook ? bufferToBase64(await file.arrayBuffer()) : undefined;
+      const res = await api.uploadFile(sessionId, file.name, kind, content, contentBase64);
       const issues = res.issues.length > 0 ? ` Issues: ${res.issues.slice(0, 3).join("; ")}` : " No issues.";
       setReport(`${res.status}: ${res.rows_accepted} rows accepted.${issues}`);
       onUploaded();
@@ -137,11 +148,11 @@ export default function FileDrop({
             fill="currentColor"
           />
         </svg>
-        <span className="text-sm font-semibold">{busy ? "Uploading…" : `Drop your ${kind}.csv here, or tap to choose`}</span>
-        <span className="text-xs text-ink/55">Validated instantly — bad rows are flagged, never silently dropped.</span>
+        <span className="text-sm font-semibold">{busy ? "Uploading…" : `Drop your ${kind} file here, or tap to choose`}</span>
+        <span className="text-xs text-ink/55">CSV, TSV, JSON, or Excel (.xlsx) — validated instantly, bad rows flagged, never silently dropped.</span>
         <input
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,.tsv,.tab,.json,.xlsx,text/csv,text/tab-separated-values,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           disabled={busy}
           onChange={(e) => handleFile(e.target.files?.[0])}
           className="sr-only"

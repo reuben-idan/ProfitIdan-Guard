@@ -58,9 +58,10 @@ python demo.py --yes
 ```
 
 To investigate your own files: create a session (`POST /sessions`), upload
-each CSV into it (`POST /sessions/{id}/files`), set its meta
-(`POST /sessions/{id}/meta`), then investigate with `--data` pointing at the
-session path (or `data_dir` in the API).
+each dataset into it (`POST /sessions/{id}/files` — CSV, TSV, JSON, or XLSX;
+Excel goes in `content_base64`), set its meta (`POST /sessions/{id}/meta`),
+then investigate with `--data` pointing at the session path (or `data_dir`
+in the API).
 
 ## The demo story
 

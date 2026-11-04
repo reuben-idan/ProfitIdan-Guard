@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS uploads (
 );
 CREATE TABLE IF NOT EXISTS investigations (
     id TEXT PRIMARY KEY, question TEXT, result TEXT, verdicts TEXT,
-    status TEXT, created_at TEXT
+    status TEXT, created_at TEXT, demo_mode INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS actions (
     id TEXT PRIMARY KEY, type TEXT, target TEXT, amount TEXT,
@@ -40,22 +40,35 @@ class Store:
     def __init__(self, path: str | Path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as conn:
+        with self._connect() as conn:
             conn.executescript(SCHEMA)
+            # WAL lets concurrent gunicorn workers read during writes
+            # instead of hitting "database is locked" under rapid clicks.
+            conn.execute("PRAGMA journal_mode=WAL")
+        # Backfill for databases created before demo_mode existed.
+        try:
+            with self._connect() as conn:
+                conn.execute("ALTER TABLE investigations ADD COLUMN demo_mode INTEGER DEFAULT 0")
+        except sqlite3.OperationalError as exc:
+            if "duplicate column" not in str(exc).lower():
+                raise
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.path, timeout=30)
 
     def _write(self, sql: str, params: tuple) -> None:
-        with sqlite3.connect(self.path) as conn:
+        with self._connect() as conn:
             conn.execute(sql, params)
             conn.commit()
 
     def _one(self, sql: str, params: tuple) -> dict | None:
-        with sqlite3.connect(self.path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute(sql, params).fetchone()
             return dict(row) if row else None
 
     def _all(self, sql: str, params: tuple = ()) -> list[dict]:
-        with sqlite3.connect(self.path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
@@ -77,11 +90,13 @@ class Store:
         )
         return uid
 
-    def save_investigation(self, question: str, result: dict, verdicts: list, status: str) -> str:
+    def save_investigation(
+        self, question: str, result: dict, verdicts: list, status: str, demo_mode: bool = False
+    ) -> str:
         iid = f"inv_{uuid.uuid4().hex[:8]}"
         self._write(
-            "INSERT INTO investigations VALUES (?,?,?,?,?,?)",
-            (iid, question, json.dumps(result), json.dumps(verdicts), status, _now()),
+            "INSERT INTO investigations VALUES (?,?,?,?,?,?,?)",
+            (iid, question, json.dumps(result), json.dumps(verdicts), status, _now(), int(bool(demo_mode))),
         )
         return iid
 

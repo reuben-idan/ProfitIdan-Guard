@@ -37,14 +37,33 @@ def _store() -> Store:
 def investigate(req: InvestigateRequest) -> dict:
     data_dir = req.data_dir or os.getenv("PROFITPILOT_DATA", "data/demo")
     demo_mode = req.demo_mode if req.demo_mode is not None else not os.getenv("MODEL_API_KEY")
-    ctx = ToolContext.for_data(data_dir)
+    try:
+        ctx = ToolContext.for_data(data_dir)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=400,
+            detail="Dataset not found — the session may have expired on the free tier. "
+            "Use the demo dataset or re-upload your files.",
+        )
     if demo_mode:
         result = run_heuristic_investigation(req.question, ctx)
     else:
-        result = run_investigation(req.question, ctx, MetaClient())
+        if not os.getenv("MODEL_API_KEY"):
+            raise HTTPException(
+                status_code=503,
+                detail="The AI model is not configured on this server (no API key). "
+                "Use Instant review instead — same tools, same verifier.",
+            )
+        try:
+            result = run_investigation(req.question, ctx, MetaClient())
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=f"AI model request failed ({exc}). Try Instant review instead.",
+            )
     verdicts = [verify_finding(f, ctx.bundle) for f in result.findings]
     status = "completed" if result.completed else "incomplete"
-    iid = _store().save_investigation(req.question, result.to_dict(), verdicts, status)
+    iid = _store().save_investigation(req.question, result.to_dict(), verdicts, status, demo_mode)
     return {
         "id": iid,
         "status": status,

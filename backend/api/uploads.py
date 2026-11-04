@@ -3,10 +3,13 @@ report exactly what was accepted and what needs correction."""
 
 from __future__ import annotations
 
+import base64
+import binascii
 import csv
 import io
+import json
 import os
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -32,16 +35,97 @@ MONEY_COLUMNS = {"amount", "amount_paid", "unit_price", "unit_cost", "prev_unit_
 class UploadRequest(BaseModel):
     filename: str
     kind: str
-    content: str  # raw CSV text
+    content: str = ""  # raw text for CSV/TSV/JSON
+    content_base64: str | None = None  # raw bytes for XLSX
+
+
+class UploadFormatError(ValueError):
+    """The file could not be parsed; callers report it, never crash on it."""
+
+
+SUPPORTED_SUFFIXES = (".csv", ".tsv", ".tab", ".json", ".xlsx")
+FORMAT_HINT = "supported types: CSV, TSV, JSON, or XLSX"
 
 
 def _store() -> Store:
     return Store(os.getenv("PROFITPILOT_DB", "backend/profitpilot.db"))
 
 
-def validate_csv(kind: str, content: str) -> tuple[list[dict], list[str]]:
+def _excel_value(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def parse_upload(filename: str, content: str, content_base64: str | None) -> list[dict]:
+    """Parse an upload by file extension into row dicts.
+
+    Raises UploadFormatError with a user-facing message on anything
+    unreadable; never raises csv/JSON/Excel internals to callers.
+    """
+    suffix = Path(filename or "").suffix.lower()
+    if suffix == ".json":
+        if not (content or "").strip():
+            raise UploadFormatError("empty file")
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise UploadFormatError(f"invalid JSON: {exc}")
+        if isinstance(data, dict) and isinstance(data.get("rows"), list):
+            data = data["rows"]
+        if not isinstance(data, list) or not all(isinstance(r, dict) for r in data):
+            raise UploadFormatError('JSON must be an array of objects (or {"rows": [...]})')
+        return [{k: ("" if v is None else str(v)) for k, v in row.items()} for row in data]
+    if suffix == ".xlsx":
+        if not content_base64:
+            raise UploadFormatError("Excel upload arrived without file bytes")
+        try:
+            raw = base64.b64decode(content_base64)
+        except (binascii.Error, ValueError):
+            raise UploadFormatError("Excel upload is not valid base64")
+        try:
+            from openpyxl import load_workbook
+
+            sheet = load_workbook(io.BytesIO(raw), read_only=True, data_only=True).active
+            grid = list(sheet.iter_rows(values_only=True))
+        except Exception as exc:
+            raise UploadFormatError(f"could not read Excel workbook: {exc}")
+        if not grid or not any(c is not None and str(c).strip() for c in grid[0]):
+            raise UploadFormatError("Excel sheet is empty or has no header row")
+        header = [str(c or "").strip() for c in grid[0]]
+        rows: list[dict] = []
+        for values in grid[1:]:
+            if all(v is None or str(v).strip() == "" for v in values):
+                continue
+            rows.append({h: _excel_value(v) for h, v in zip(header, values)})
+        return rows
+    if suffix in (".csv", ".tsv", ".tab"):
+        if not (content or "").strip():
+            raise UploadFormatError("empty file")
+        try:
+            parsed = list(csv.DictReader(io.StringIO(content), delimiter="," if suffix == ".csv" else "\t"))
+        except (csv.Error, UnicodeDecodeError) as exc:
+            raise UploadFormatError(f"could not parse {suffix} file: {exc}")
+        return [{k: (v or "") for k, v in row.items() if k is not None} for row in parsed]
+    raise UploadFormatError(f"unsupported file type {suffix or '(none)'} — {FORMAT_HINT}")
+
+
+def to_canonical_csv(kind: str, rows: list[dict]) -> str:
+    """Normalize any accepted upload to the schema CSV the finance tools read."""
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=REQUIRED_COLUMNS[kind], extrasaction="ignore")
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({col: row.get(col, "") for col in REQUIRED_COLUMNS[kind]})
+    return buf.getvalue()
+
+
+def validate_rows(kind: str, rows: list[dict]) -> tuple[list[dict], list[str]]:
     issues: list[str] = []
-    rows = list(csv.DictReader(io.StringIO(content)))
     expected = REQUIRED_COLUMNS[kind]
     header = rows[0].keys() if rows else []
     for col in expected:
@@ -82,6 +166,15 @@ def validate_csv(kind: str, content: str) -> tuple[list[dict], list[str]]:
     return accepted, issues
 
 
+def validate_csv(kind: str, content: str) -> tuple[list[dict], list[str]]:
+    """Validate CSV text; unparseable input becomes issues, never raises."""
+    try:
+        rows = parse_upload("upload.csv", content, None)
+    except UploadFormatError as exc:
+        return [], [str(exc)]
+    return validate_rows(kind, rows)
+
+
 TEMPLATE_ROWS = {
     "invoices": "INV-001,Example Customer,2026-10-01,2026-10-31,5000.00,0.00,unpaid",
     "supplier_bills": "BILL-001,Example Supplier,2026-10-01,2026-10-31,3000.00,0.00,unpaid",
@@ -105,13 +198,17 @@ def template(kind: str) -> dict:
 def upload(req: UploadRequest) -> dict:
     if req.kind not in REQUIRED_COLUMNS:
         return {"status": "rejected", "issues": [f"unknown kind: {req.kind}"]}
-    accepted, issues = validate_csv(req.kind, req.content)
+    try:
+        rows = parse_upload(req.filename, req.content, req.content_base64)
+    except UploadFormatError as exc:
+        return {"status": "rejected", "issues": [str(exc)]}
+    accepted, issues = validate_rows(req.kind, rows)
     upload_dir = Path(os.getenv("PROFITPILOT_UPLOADS", "data/uploads"))
     upload_dir.mkdir(parents=True, exist_ok=True)
     # Store every upload attempt under its own id so files never collide.
     uid = _store().record_upload(req.filename, req.kind, len(accepted), issues, "")
     dest = upload_dir / f"{uid}_{TABLE_FILES[req.kind]}"
-    dest.write_text(req.content, encoding="utf-8")
+    dest.write_text(to_canonical_csv(req.kind, rows), encoding="utf-8")
     return {
         "status": "accepted" if accepted and not issues else "accepted_with_issues",
         "upload_id": uid,

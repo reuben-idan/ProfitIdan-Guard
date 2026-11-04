@@ -34,3 +34,15 @@ from the repo plus any sessions uploaded at runtime.
 - `GET <render-url>/health` -> `{"status": "ok"}`
 - `GET <render-url>/docs` -> API docs in a browser
 - From the Vercel frontend: run the demo question end to end.
+
+## If Full AI investigation fails
+
+- Open the `profitpilot-api` service -> Environment: `MODEL_API_KEY`
+  must be set there (the blueprint prompt alone is not enough if it was
+  skipped). Paste the key with no quotes or surrounding whitespace.
+- After any env change: click **Save Changes**, then **Manual Deploy** ->
+  **Deploy latest commit**. The service must restart to pick up new vars.
+- If it still fails, the app now reports the reason instead of a CORS
+  error: a `502` names what the model API returned, and the Render
+  **Logs** tab shows the backend line. `MODEL_NAME` and
+  `META_API_BASE_URL` only need changing if Meta instructs otherwise.

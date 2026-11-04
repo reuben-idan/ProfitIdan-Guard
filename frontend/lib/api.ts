@@ -4,9 +4,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+  }).catch((err: unknown) => {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new Error(
+      "Could not reach the backend — it may be waking up or unreachable. Wait a moment and retry."
+    );
   });
   if (!res.ok) {
-    throw new Error(`${res.status}: ${await res.text()}`);
+    const text = await res.text();
+    let message = `${res.status}: ${text.slice(0, 200)}`;
+    try {
+      const body = JSON.parse(text) as { detail?: unknown };
+      if (typeof body?.detail === "string" && body.detail) message = body.detail;
+    } catch {
+      // Not JSON — keep the raw status + body.
+    }
+    throw new Error(message);
   }
   return (await res.json()) as T;
 }
@@ -138,10 +151,16 @@ export const api = {
   health: () => get<{ status: string }>("/health"),
   createSession: (name: string) =>
     post<{ id: string; name: string; path: string }>("/sessions", { name }),
-  uploadFile: (sessionId: string, filename: string, kind: string, content: string) =>
+  uploadFile: (
+    sessionId: string,
+    filename: string,
+    kind: string,
+    content: string,
+    contentBase64?: string
+  ) =>
     post<{ status: string; rows_accepted: number; issues: string[] }>(
       `/sessions/${sessionId}/files`,
-      { filename, kind, content }
+      { filename, kind, content, content_base64: contentBase64 ?? null }
     ),
   setMeta: (sessionId: string, meta: Record<string, string>) =>
     post<{ status: string; path: string }>(`/sessions/${sessionId}/meta`, meta),
@@ -152,10 +171,10 @@ export const api = {
     ),
   template: (kind: string) =>
     get<{ kind: string; filename: string; content: string }>(`/uploads/templates/${kind}`),
-  investigate: (question: string, data_dir?: string, demo_mode?: boolean) =>
-    post<{ id: string; status: string; demo_mode: boolean; result: InvestigationResult; verdicts: Verdict[] }>(
+  investigate: (question: string, data_dir?: string, demo_mode?: boolean, signal?: AbortSignal) =>
+    request<{ id: string; status: string; demo_mode: boolean; result: InvestigationResult; verdicts: Verdict[] }>(
       "/investigations",
-      { question, data_dir, demo_mode }
+      { method: "POST", body: JSON.stringify({ question, data_dir, demo_mode }), signal }
     ),
   getInvestigation: (id: string) => get<InvestigationRecord>(`/investigations/${id}`),
   listInvestigations: () => get<{ investigations: InvestigationSummary[] }>("/investigations"),

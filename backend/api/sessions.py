@@ -15,7 +15,14 @@ from pydantic import BaseModel
 from ..agent.tools import ToolContext, run_tool
 from ..finance.datasets import TABLE_FILES
 from ..models.store import Store
-from .uploads import REQUIRED_COLUMNS, validate_csv
+from .uploads import (
+    REQUIRED_COLUMNS,
+    UploadFormatError,
+    parse_upload,
+    to_canonical_csv,
+    validate_csv,
+    validate_rows,
+)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -27,7 +34,8 @@ class CreateSessionRequest(BaseModel):
 class SessionFileRequest(BaseModel):
     filename: str
     kind: str
-    content: str
+    content: str = ""
+    content_base64: str | None = None
 
 
 class SessionMetaRequest(BaseModel):
@@ -68,9 +76,13 @@ def upload_session_file(session_id: str, req: SessionFileRequest) -> dict:
     session = _get_session_or_404(session_id)
     if req.kind not in REQUIRED_COLUMNS:
         raise HTTPException(status_code=400, detail=f"unknown kind: {req.kind}")
-    accepted, issues = validate_csv(req.kind, req.content)
+    try:
+        rows = parse_upload(req.filename, req.content, req.content_base64)
+    except UploadFormatError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    accepted, issues = validate_rows(req.kind, rows)
     dest = Path(_sessions_root()) / session_id / TABLE_FILES[req.kind]
-    dest.write_text(req.content, encoding="utf-8")
+    dest.write_text(to_canonical_csv(req.kind, rows), encoding="utf-8")
     uid = _store().record_upload(req.filename, req.kind, len(accepted), issues, str(dest))
     return {
         "status": "accepted" if accepted and not issues else "accepted_with_issues",
