@@ -9,6 +9,7 @@ import FileDrop, { KindStatus } from "@/components/FileDrop";
 import KpiCard from "@/components/KpiCard";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import VoiceInput from "@/components/VoiceInput";
+import { Card, LiveDot, Money, Pill, Step, btnLight, btnOutlineLight, inputCls } from "@/components/ui";
 
 const DEMO_QUESTION =
   "Sales are up but I'm running out of cash. Find the problem and tell me what to do first.";
@@ -18,6 +19,12 @@ const QUICK_QUESTIONS = [
   "Is my stock tying up too much cash?",
   "Will I survive the next two weeks of payments?",
   "Which product is killing my margin?",
+];
+
+const PROOF_STATS = [
+  { value: "GH₵27,000", label: "overdue found in the demo" },
+  { value: "−GH₵14,000", label: "slip scenario flagged" },
+  { value: "4", label: "ranked next actions drafted" },
 ];
 
 export default function Home() {
@@ -103,88 +110,119 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-8">
-      <section className="border-b border-slate-200 pb-6">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span
-            className={`inline-block rounded-full px-2.5 py-1 font-semibold ${backendOk === false ? "bg-red-100 text-red-900" : "bg-emerald-100 text-emerald-900"}`}
-          >
-            {backendOk === null ? "Checking backend…" : backendOk ? "Backend online" : "Backend unreachable — start it on :8000"}
-          </span>
-          <span className="text-slate-500">Muse reasoning · TradeGuard verification · owner approval</span>
-        </div>
-        <h1 className="mt-3 max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+    <div className="space-y-5 sm:space-y-7">
+      <section className="animate-rise pb-1 pt-1 sm:pt-3">
+        <Pill tone={backendOk === false ? "bad" : "ok"}>
+          <LiveDot on={backendOk !== false} />
+          {backendOk === null
+            ? "Checking backend…"
+            : backendOk
+              ? "Backend online"
+              : "Backend unreachable — start it on :8000"}
+        </Pill>
+        <h1 className="mt-3 max-w-xl font-display text-[34px] font-bold leading-[1.08] tracking-tight sm:text-5xl">
           Sales are up. Cash is gone. Find the leak before Friday payroll.
         </h1>
-        <p className="mt-2 max-w-2xl text-base leading-relaxed text-slate-700">
+        <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink/70">
           ProfitPilot investigates like a CFO: it recomputes your receivables, margins, stock, and
           forecast from your own records, shows the evidence behind every claim, and drafts the one
           action that frees cash fastest. Nothing sends without your approval.
         </p>
-        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
-          <span><strong className="text-slate-900">GH₵27,000</strong> overdue found in the demo</span>
-          <span><strong className="text-slate-900">−GH₵14,000</strong> slip scenario flagged</span>
-          <span><strong className="text-slate-900">4</strong> ranked next actions drafted</span>
-        </div>
+        <dl className="mt-4 grid grid-cols-3 gap-3 border-y border-ink/10 py-3.5 sm:max-w-xl">
+          {PROOF_STATS.map((s) => (
+            <div key={s.label} className="flex flex-col">
+              <dt className="order-2 mt-1 text-xs leading-snug text-ink/60">{s.label}</dt>
+              <dd className="order-1 font-display text-xl font-bold tabular-nums sm:text-2xl">
+                {s.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
-      {msg && <p role="alert" className="rounded-md bg-amber-100 p-3 text-sm text-amber-900">{msg}</p>}
+      {msg && (
+        <p role="alert" className="rounded-xl bg-gold-100 px-4 py-3 text-sm font-medium text-gold-800">
+          {msg}
+        </p>
+      )}
 
-      <section aria-label="Dataset" className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-        <h2 className="font-bold"><span className="mr-2 text-emerald-800">1.</span>Dataset</h2>
-        <label className="mt-2 flex min-h-[44px] cursor-pointer items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={useDemo}
-            onChange={(e) => setUseDemo(e.target.checked)}
-            className="h-5 w-5 accent-emerald-800"
-          />
-          Use the built-in demo dataset (Accra Foods, fictional — works instantly)
-        </label>
+      <Card className="p-4 sm:p-6">
+        <Step
+          n="01"
+          title="Dataset"
+          hint="Start with the built-in demo, or bring your own records."
+        />
+        <button
+          type="button"
+          role="switch"
+          aria-checked={useDemo}
+          onClick={() => setUseDemo(!useDemo)}
+          className="mt-3 flex min-h-[56px] w-full items-center justify-between gap-3 rounded-xl bg-mist px-4 py-2.5 text-left transition active:scale-[0.99]"
+        >
+          <span>
+            <span className="block text-sm font-bold">Use the demo dataset</span>
+            <span className="block text-xs text-ink/60">Accra Foods, fictional — works instantly</span>
+          </span>
+          <span
+            aria-hidden="true"
+            className={`flex h-7 w-12 shrink-0 items-center rounded-full p-1 transition ${
+              useDemo ? "justify-end bg-pine-700" : "justify-start bg-ink/20"
+            }`}
+          >
+            <span className="h-5 w-5 rounded-full bg-white shadow" />
+          </span>
+        </button>
         {!useDemo && !session && (
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               value={sessionName}
               onChange={(e) => setSessionName(e.target.value)}
               aria-label="Session name"
-              className="min-h-[44px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder="Session name"
+              className={`${inputCls} flex-1`}
             />
             <button
               type="button"
               onClick={createSession}
-              className="min-h-[44px] rounded-md bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-900"
+              className="inline-flex min-h-[48px] items-center justify-center rounded-lg bg-pine-800 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-pine-900 active:scale-[0.98]"
             >
               Create session
             </button>
           </div>
         )}
         {session && !useDemo && (
-          <div className="mt-3 space-y-4">
+          <div className="mt-4 space-y-4">
             <p className="text-sm">
               Session <span className="font-mono font-semibold">{session.id}</span>
-              <button type="button" onClick={refresh} className="ml-3 min-h-[44px] text-emerald-800 underline-offset-2 hover:underline">
+              <button
+                type="button"
+                onClick={refresh}
+                className="ml-3 min-h-[44px] font-semibold text-pine-800 underline-offset-2 hover:underline"
+              >
                 Refresh status
               </button>
             </p>
             <KindStatus status={status} />
             <FileDrop sessionId={session.id} onUploaded={refresh} />
-            <details className="rounded-md bg-slate-50 p-3 text-sm">
-              <summary className="cursor-pointer font-medium">Business details (currency, dates, opening cash)</summary>
-              <div className="mt-2 flex flex-wrap gap-2">
+            <details className="rounded-xl bg-mist p-4 text-sm">
+              <summary className="cursor-pointer font-semibold">
+                Business details (currency, dates, opening cash)
+              </summary>
+              <div className="mt-3 flex flex-wrap gap-2">
                 {Object.entries(meta).map(([k, v]) => (
-                  <label key={k} className="flex min-w-[140px] flex-1 flex-col text-xs text-slate-600">
+                  <label key={k} className="flex min-w-[140px] flex-1 flex-col text-xs font-medium text-ink/60">
                     {k}
                     <input
                       value={v}
                       onChange={(e) => setMeta({ ...meta, [k]: e.target.value })}
-                      className="mt-0.5 min-h-[44px] rounded-md border border-slate-300 px-2 py-2 text-sm text-slate-900"
+                      className="mt-1 min-h-[44px] rounded-lg border border-ink/15 bg-white px-2.5 py-2 text-sm text-ink"
                     />
                   </label>
                 ))}
                 <button
                   type="button"
                   onClick={saveMeta}
-                  className="min-h-[44px] self-end rounded-md border border-slate-300 px-4 py-2 hover:bg-slate-100"
+                  className="min-h-[44px] self-end rounded-lg border border-ink/15 bg-white px-4 py-2 font-semibold transition hover:border-pine-700 active:scale-[0.98]"
                 >
                   Save details
                 </button>
@@ -196,10 +234,10 @@ export default function Home() {
                 {" · "}Details: {status.meta_present ? "set" : "missing"}
               </p>
             )}
-            {loadingSnapshot && <LoadingSkeleton lines={3} />}
+            {loadingSnapshot && <LoadingSkeleton lines={2} />}
             {snapshot && (
               <div>
-                <h3 className="text-sm font-semibold">Live snapshot — no AI call needed</h3>
+                <h3 className="text-sm font-bold">Live snapshot — no AI call needed</h3>
                 <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
                   <KpiCard label="Cash on hand" value={formatMoney(snapshot.cash_on_hand, snapshot.currency)} />
                   <KpiCard label="Overdue" value={formatMoney(snapshot.overdue_total, snapshot.currency)} tone="bad" sub="collect first" />
@@ -211,25 +249,26 @@ export default function Home() {
                   />
                 </div>
                 {queue.length > 0 && (
-                  <p className="mt-2 text-sm text-slate-600">
-                    Top chase: <strong>{queue[0].customer}</strong> — {formatMoney(queue[0].balance, snapshot.currency)} ({queue[0].reason})
+                  <p className="mt-2.5 rounded-lg bg-pine-50 px-3.5 py-2.5 text-sm text-pine-900">
+                    Top chase: <strong>{queue[0].customer}</strong> —{" "}
+                    <Money amount={queue[0].balance} currency={snapshot.currency} className="font-bold" /> ({queue[0].reason})
                   </p>
                 )}
               </div>
             )}
           </div>
         )}
-      </section>
+      </Card>
 
-      <section aria-label="Question" className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-        <h2 className="font-bold"><span className="mr-2 text-emerald-800">2.</span>Ask in your own words</h2>
-        <div className="mt-2 flex flex-col gap-2">
+      <Card className="p-4 sm:p-6">
+        <Step n="02" title="Ask in your own words" />
+        <div className="mt-3 flex flex-col gap-2.5">
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             rows={3}
             aria-label="Your question"
-            className="w-full rounded-md border border-slate-300 p-3 text-base"
+            className={`${inputCls} resize-y leading-relaxed`}
           />
           <div className="flex flex-wrap gap-2">
             <VoiceInput onText={(t) => setQuestion(t)} />
@@ -238,27 +277,37 @@ export default function Home() {
                 key={q}
                 type="button"
                 onClick={() => setQuestion(q)}
-                className="min-h-[44px] rounded-full border border-slate-300 px-3 py-2 text-left text-xs hover:bg-slate-100"
+                className={`min-h-[44px] rounded-full border px-4 py-2 text-left text-[13px] font-medium transition active:scale-[0.98] ${
+                  question === q
+                    ? "border-pine-700 bg-pine-50 text-pine-900"
+                    : "border-ink/15 bg-white text-ink/75 hover:border-pine-700/50"
+                }`}
               >
                 {q}
               </button>
             ))}
           </div>
         </div>
-      </section>
+      </Card>
 
-      <section aria-label="Investigate" className="rounded-lg border border-emerald-800 bg-emerald-900 p-4 text-white sm:p-5">
-        <h2 className="font-bold"><span className="mr-2 text-emerald-200">3.</span>Get a verified answer</h2>
-        <p className="mt-1 text-sm text-emerald-100">
-          Instant review uses the deterministic engine (seconds, always available). Full investigation
-          uses the Muse model (about a minute, needs the API key on the backend).
+      <section
+        aria-label="Investigate"
+        className="rounded-2xl bg-pine-900 p-5 text-white shadow-pop sm:p-7"
+      >
+        <h2 className="flex items-baseline gap-2.5 text-lg font-bold tracking-tight">
+          <span className="font-display text-xl text-pine-200" aria-hidden="true">03</span>
+          Get a verified answer
+        </h2>
+        <p className="mt-1 max-w-xl text-sm leading-relaxed text-pine-100/90">
+          Instant review uses the deterministic engine (seconds, always available). Full
+          investigation uses the Muse model (about a minute, needs the API key on the backend).
         </p>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
             onClick={() => investigate(true)}
             disabled={busy || question.trim().length === 0}
-            className="min-h-[48px] flex-1 rounded-md bg-white px-4 py-3 text-sm font-bold text-emerald-900 hover:bg-emerald-50 disabled:opacity-50"
+            className={`${btnLight} flex-1`}
           >
             {busy ? "Working…" : "Instant review (seconds)"}
           </button>
@@ -266,33 +315,51 @@ export default function Home() {
             type="button"
             onClick={() => investigate(false)}
             disabled={busy || question.trim().length === 0}
-            className="min-h-[48px] flex-1 rounded-md border border-emerald-200 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
+            className={`${btnOutlineLight} flex-1`}
           >
             Full AI investigation (~1 min)
           </button>
         </div>
       </section>
 
-      <section aria-label="How it works" className="grid gap-6 md:grid-cols-2">
+      <section aria-label="How it works" className="grid gap-6 pt-1 md:grid-cols-2 md:gap-10">
         <div>
-          <h2 className="font-bold">How it works</h2>
-          <ol className="mt-2 space-y-2 text-sm leading-relaxed text-slate-700">
-            <li><strong className="text-slate-900">1. Bring your records.</strong> Upload five CSVs or start with the demo. Bad rows are flagged, never faked.</li>
-            <li><strong className="text-slate-900">2. Ask plainly.</strong> Type or speak the question you would ask an accountant.</li>
-            <li><strong className="text-slate-900">3. Get proof, not vibes.</strong> Every figure is recomputed from source rows and graded verified, unverified, or contradicted.</li>
-            <li><strong className="text-slate-900">4. Approve the next move.</strong> Collection reminders and holds are drafted for you — WhatsApp-ready, audit-logged.</li>
+          <h2 className="text-lg font-bold tracking-tight">How it works</h2>
+          <ol className="mt-2 divide-y divide-ink/10 text-sm leading-relaxed">
+            <li className="flex gap-3 py-2.5">
+              <span className="font-display font-bold text-pine-700" aria-hidden="true">1</span>
+              <span><strong>Bring your records.</strong> <span className="text-ink/70">Upload five CSVs or start with the demo. Bad rows are flagged, never faked.</span></span>
+            </li>
+            <li className="flex gap-3 py-2.5">
+              <span className="font-display font-bold text-pine-700" aria-hidden="true">2</span>
+              <span><strong>Ask plainly.</strong> <span className="text-ink/70">Type or speak the question you would ask an accountant.</span></span>
+            </li>
+            <li className="flex gap-3 py-2.5">
+              <span className="font-display font-bold text-pine-700" aria-hidden="true">3</span>
+              <span><strong>Get proof, not vibes.</strong> <span className="text-ink/70">Every figure is recomputed from source rows and graded verified, unverified, or contradicted.</span></span>
+            </li>
+            <li className="flex gap-3 py-2.5">
+              <span className="font-display font-bold text-pine-700" aria-hidden="true">4</span>
+              <span><strong>Approve the next move.</strong> <span className="text-ink/70">Collection reminders and holds are drafted for you — WhatsApp-ready, audit-logged.</span></span>
+            </li>
           </ol>
         </div>
         <div>
-          <h2 className="font-bold">Why owners trust it</h2>
-          <ul className="mt-2 space-y-2 text-sm leading-relaxed text-slate-700">
-            <li>Money is computed in Decimal code, never by the model from memory.</li>
-            <li>A wrong number fails loudly as <span className="font-mono text-xs">contradicted</span> instead of shipping.</li>
-            <li>Actions above the verified ceiling are rejected before drafting.</li>
-            <li>Past investigations stay in <Link href="/history" className="text-emerald-800 underline-offset-2 hover:underline">History</Link> with their evidence.</li>
+          <h2 className="text-lg font-bold tracking-tight">Why owners trust it</h2>
+          <ul className="mt-2 divide-y divide-ink/10 text-sm leading-relaxed text-ink/75">
+            <li className="py-2.5">Money is computed in Decimal code, never by the model from memory.</li>
+            <li className="py-2.5">A wrong number fails loudly as <span className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-xs font-bold text-clay">contradicted</span> instead of shipping.</li>
+            <li className="py-2.5">Actions above the verified ceiling are rejected before drafting.</li>
+            <li className="py-2.5">
+              Past investigations stay in{" "}
+              <Link href="/history" className="font-semibold text-pine-800 underline-offset-2 hover:underline">
+                History
+              </Link>{" "}
+              with their evidence.
+            </li>
           </ul>
           <p className="mt-3 text-sm">
-            <Link href="/pricing" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+            <Link href="/pricing" className="font-bold text-pine-800 underline-offset-2 hover:underline">
               See pricing — from GH₵0 to try, GH₵450/mo to run the business on it →
             </Link>
           </p>

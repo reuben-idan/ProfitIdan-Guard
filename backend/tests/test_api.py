@@ -170,6 +170,20 @@ def test_cors_origins_from_env(monkeypatch):
     assert cors_origins() == ["http://localhost:3000"]
 
 
+def test_cors_origin_regex_covers_vercel(monkeypatch):
+    import re
+
+    from backend.main import cors_origin_regex
+
+    monkeypatch.delenv("CORS_ORIGIN_REGEX", raising=False)
+    pattern = cors_origin_regex()
+    assert pattern is not None
+    assert re.match(pattern, "https://frontend-five-ebon-61.vercel.app")
+    assert not re.match(pattern, "https://evil.example.com")
+    monkeypatch.setenv("CORS_ORIGIN_REGEX", "")
+    assert cors_origin_regex() is None
+
+
 def test_investigation_demo_mode_without_key(env, monkeypatch):
     monkeypatch.delenv("MODEL_API_KEY", raising=False)
     body = inv_api.investigate(

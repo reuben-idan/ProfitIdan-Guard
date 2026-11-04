@@ -11,8 +11,11 @@ from the repo plus any sessions uploaded at runtime.
    `MODEL_NAME` and `META_API_BASE_URL` come from the blueprint.
 4. Deploy. Note the service URL, e.g.
    `https://profitpilot-api.onrender.com`. Check `/health`.
-5. Set `CORS_ORIGINS` on the Render service to your Vercel frontend URL
-   (comma-separated if several), then redeploy the service.
+5. CORS is preconfigured: any `https://*.vercel.app` origin is accepted
+   via `CORS_ORIGIN_REGEX`, so production and preview deployments work
+   without changes. Only if you serve the frontend from a custom domain,
+   add it to `CORS_ORIGINS` on the Render service (comma-separated if
+   several), then redeploy the service.
 6. On the Vercel project, set `NEXT_PUBLIC_API_URL` to the Render service
    URL (no trailing slash) and redeploy the frontend.
 

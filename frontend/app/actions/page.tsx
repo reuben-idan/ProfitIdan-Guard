@@ -38,29 +38,45 @@ export default function ActionsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold sm:text-2xl">Actions awaiting review</h1>
-        <p className="mt-1 text-sm text-slate-700">
-          {drafts > 0 ? `${drafts} draft(s) need your decision. ` : ""}
+        <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+          Actions awaiting review
+        </h1>
+        <p className="mt-1.5 max-w-xl text-[15px] leading-relaxed text-ink/70">
+          {drafts > 0 ? (
+            <>
+              <strong className="text-ink">{drafts} draft{drafts === 1 ? "" : "s"} need{drafts === 1 ? "s" : ""} your decision.</strong>{" "}
+            </>
+          ) : (
+            "All caught up. "
+          )}
           Nothing executes without your approval. Execution is simulated for the demo.
         </p>
       </div>
-      <div className="no-print flex flex-wrap gap-2" role="group" aria-label="Filter by status">
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            aria-pressed={filter === f}
-            className={`min-h-[44px] rounded-full border px-3 py-2 text-xs font-medium ${
-              filter === f ? "border-emerald-800 bg-emerald-800 text-white" : "border-slate-300 bg-white hover:bg-slate-100"
-            }`}
-          >
-            {f.replace(/_/g, " ")}
-          </button>
-        ))}
+      <div className="no-print -mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0" role="group" aria-label="Filter by status">
+        <div className="flex w-max gap-2 sm:w-auto sm:flex-wrap">
+          {FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              aria-pressed={filter === f}
+              className={`min-h-[44px] shrink-0 rounded-full border px-4 py-2 text-[13px] font-semibold transition active:scale-[0.98] ${
+                filter === f
+                  ? "border-pine-800 bg-pine-800 text-white"
+                  : "border-ink/15 bg-white text-ink/70 hover:border-pine-700/50"
+              }`}
+            >
+              {f.replace(/_/g, " ")}
+            </button>
+          ))}
+        </div>
       </div>
-      {error && <p role="alert" className="text-sm text-red-900">Failed to load: {error}</p>}
-      {loading && <LoadingSkeleton lines={4} />}
+      {error && (
+        <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-clay">
+          Failed to load: {error}
+        </p>
+      )}
+      {loading && <LoadingSkeleton lines={3} />}
       {!loading && shown.length === 0 && !error && (
         <EmptyState
           title={filter === "all" ? "No actions yet" : `No ${filter.replace(/_/g, " ")} actions`}

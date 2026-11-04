@@ -3,13 +3,41 @@
 @tailwind utilities;
 
 body {
-  @apply bg-slate-100 text-slate-900 antialiased;
+  @apply bg-mist font-sans text-ink antialiased;
   font-variant-numeric: tabular-nums;
+  text-size-adjust: 100%;
+}
+
+h1 {
+  text-wrap: balance;
+}
+
+::selection {
+  background: theme("colors.pine.200");
 }
 
 :focus-visible {
-  outline: 2px solid theme("colors.emerald.700");
+  outline: 2px solid theme("colors.pine.700");
   outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Shimmer skeleton: a soft light sweep over a flat track. */
+.skeleton {
+  @apply relative overflow-hidden rounded-md bg-pine-950/10;
+}
+.skeleton::after {
+  content: "";
+  @apply absolute inset-0 animate-sweep bg-gradient-to-r from-transparent via-white/70 to-transparent;
+}
+
+/* Number inputs: keep them clean on mobile. */
+input[type="number"] {
+  appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
 }
 
 main {

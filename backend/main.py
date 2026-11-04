@@ -14,10 +14,19 @@ def cors_origins() -> list[str]:
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
+def cors_origin_regex() -> str | None:
+    """Regex matched against the request Origin (covers Vercel's
+    per-deployment preview URLs, which cannot be allowlisted one by one).
+    Set CORS_ORIGIN_REGEX to "" to disable; unset allows any https
+    *.vercel.app origin. Explicit CORS_ORIGINS entries always apply too."""
+    return os.getenv("CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app") or None
+
+
 app = FastAPI(title="ProfitPilot AI", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins(),
+    allow_origin_regex=cors_origin_regex(),
     allow_methods=["*"],
     allow_headers=["*"],
 )

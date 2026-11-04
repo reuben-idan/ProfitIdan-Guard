@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api, whatsappLink, type SessionStatus } from "@/lib/api";
+import { btnOutline, btnPrimary } from "./ui";
 
 export const DATASET_KINDS = ["invoices", "supplier_bills", "bank", "sales", "inventory"] as const;
 
@@ -19,27 +20,39 @@ export function KindStatus({ status }: { status: SessionStatus | null }) {
     <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {DATASET_KINDS.map((kind) => {
         const file = status.files[kind];
-        const ok = file?.present && (file.issues?.length ?? 0) === 0;
-        const warn = file?.present && (file.issues?.length ?? 0) > 0;
+        const issues = file?.issues?.length ?? 0;
+        const ok = file?.present && issues === 0;
+        const warn = file?.present && issues > 0;
         return (
           <li
             key={kind}
-            className={`flex items-start justify-between gap-2 rounded-md border p-2.5 text-sm ${
-              ok ? "border-emerald-200 bg-emerald-50" : warn ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"
+            className={`flex items-start justify-between gap-2 rounded-xl border p-3 text-sm ${
+              ok
+                ? "border-pine-700/25 bg-pine-50"
+                : warn
+                  ? "border-gold-700/30 bg-gold-100/40"
+                  : "border-ink/10 bg-white"
             }`}
           >
             <span>
-              <span className="font-mono text-xs font-semibold">{kind}</span>
-              <span className="block text-xs text-slate-600">{KIND_HELP[kind]}</span>
+              <span className="font-mono text-[13px] font-semibold">{kind}</span>
+              <span className="block text-xs text-ink/60">{KIND_HELP[kind]}</span>
               {file?.present ? (
-                <span className="block text-xs text-slate-600">
-                  {file.rows_accepted} rows{warn ? ` · ${file.issues?.length} issue(s)` : ""}
+                <span className="mt-0.5 block text-xs font-medium text-ink/75">
+                  {file.rows_accepted} rows{warn ? ` · ${issues} issue${issues === 1 ? "" : "s"}` : ""}
                 </span>
               ) : (
-                <span className="block text-xs text-slate-500">Not uploaded yet</span>
+                <span className="mt-0.5 block text-xs text-ink/45">Not uploaded yet</span>
               )}
             </span>
-            <span aria-hidden="true" className="text-base">{ok ? "✓" : warn ? "!" : "○"}</span>
+            <span
+              aria-hidden="true"
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                ok ? "bg-pine-700 text-white" : warn ? "bg-gold-700 text-white" : "bg-ink/10 text-ink/50"
+              }`}
+            >
+              {ok ? "✓" : warn ? "!" : "·"}
+            </span>
           </li>
         );
       })}
@@ -92,25 +105,21 @@ export default function FileDrop({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <label className="text-sm font-medium">
           <span className="sr-only">Dataset type</span>
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value)}
-            className="min-h-[44px] rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
+            className="min-h-[44px] rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-medium"
           >
             {DATASET_KINDS.map((k) => (
               <option key={k} value={k}>{k}</option>
             ))}
           </select>
         </label>
-        <button
-          type="button"
-          onClick={downloadTemplate}
-          className="min-h-[44px] rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100"
-        >
+        <button type="button" onClick={downloadTemplate} className={btnOutline}>
           Get CSV template
         </button>
       </div>
@@ -118,12 +127,18 @@ export default function FileDrop({
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files?.[0]); }}
-        className={`flex min-h-[88px] cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-4 text-center text-sm ${
-          dragOver ? "border-emerald-600 bg-emerald-50" : "border-slate-300 bg-slate-50 hover:bg-slate-100"
+        className={`flex min-h-[104px] cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed p-4 text-center transition ${
+          dragOver ? "border-pine-700 bg-pine-50" : "border-ink/20 bg-mist/60 hover:border-pine-700/50 hover:bg-pine-50/50"
         }`}
       >
-        <span className="font-medium">{busy ? "Uploading…" : `Drop your ${kind}.csv here, or tap to choose`}</span>
-        <span className="text-xs text-slate-500">Validated instantly — bad rows are flagged, never silently dropped.</span>
+        <svg viewBox="0 0 24 24" className="h-6 w-6 text-pine-700" aria-hidden="true">
+          <path
+            d="M12 3a1 1 0 0 1 1 1v7.6l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L11 11.6V4a1 1 0 0 1 1-1ZM4 15a1 1 0 0 1 1 1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1v-2Z"
+            fill="currentColor"
+          />
+        </svg>
+        <span className="text-sm font-semibold">{busy ? "Uploading…" : `Drop your ${kind}.csv here, or tap to choose`}</span>
+        <span className="text-xs text-ink/55">Validated instantly — bad rows are flagged, never silently dropped.</span>
         <input
           type="file"
           accept=".csv,text/csv"
@@ -132,7 +147,7 @@ export default function FileDrop({
           className="sr-only"
         />
       </label>
-      {report && <p role="status" className="text-sm text-slate-700">{report}</p>}
+      {report && <p role="status" className="rounded-lg bg-mist px-3 py-2 text-sm">{report}</p>}
     </div>
   );
 }
@@ -154,22 +169,14 @@ export function ShareActions({ title, text }: { title: string; text: string }) {
         href={whatsappLink(`${title}\n${text}`)}
         target="_blank"
         rel="noreferrer"
-        className="inline-block min-h-[44px] rounded-md bg-emerald-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-900"
+        className={btnPrimary}
       >
         Share on WhatsApp
       </a>
-      <button
-        type="button"
-        onClick={copy}
-        className="min-h-[44px] rounded-md border border-slate-300 px-4 py-2.5 text-sm hover:bg-slate-100"
-      >
-        {copied ? "Copied" : "Copy summary"}
+      <button type="button" onClick={copy} className={btnOutline}>
+        {copied ? "Copied ✓" : "Copy summary"}
       </button>
-      <button
-        type="button"
-        onClick={() => window.print()}
-        className="min-h-[44px] rounded-md border border-slate-300 px-4 py-2.5 text-sm hover:bg-slate-100"
-      >
+      <button type="button" onClick={() => window.print()} className={btnOutline}>
         Print / PDF
       </button>
     </div>
