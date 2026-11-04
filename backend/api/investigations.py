@@ -54,13 +54,20 @@ def investigate(req: InvestigateRequest) -> dict:
                 detail="The AI model is not configured on this server (no API key). "
                 "Use Instant review instead — same tools, same verifier.",
             )
+        client = MetaClient()
         try:
-            result = run_investigation(req.question, ctx, MetaClient())
+            result = run_investigation(req.question, ctx, client)
         except Exception as exc:
-            raise HTTPException(
-                status_code=502,
-                detail=f"AI model request failed ({exc}). Try Instant review instead.",
-            )
+            where = f"for model '{client.model}' at {client.base_url} ({exc})"
+            if "404" in str(exc) or "not found" in str(exc).lower():
+                detail = (
+                    f"AI model request failed {where}: the API does not recognise that model id. "
+                    "On Render, check MODEL_NAME is exactly muse-spark-1.3 (no typos, quotes, or "
+                    "extra spaces), then Manual Deploy to restart. Try Instant review meanwhile."
+                )
+            else:
+                detail = f"AI model request failed {where}. Try Instant review instead."
+            raise HTTPException(status_code=502, detail=detail)
     verdicts = [verify_finding(f, ctx.bundle) for f in result.findings]
     status = "completed" if result.completed else "incomplete"
     iid = _store().save_investigation(req.question, result.to_dict(), verdicts, status, demo_mode)

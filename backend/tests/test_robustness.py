@@ -39,6 +39,30 @@ def test_investigate_without_key_is_503_not_crash(env, monkeypatch):
     assert "Instant review" in exc.value.detail
 
 
+def test_investigate_model_404_names_the_fix(env, monkeypatch):
+    monkeypatch.setenv("MODEL_API_KEY", "test-key")
+    monkeypatch.setattr(
+        inv_api,
+        "run_investigation",
+        lambda *a, **k: (_ for _ in ()).throw(
+            Exception("Error code: 404 - The requested model was not found.")
+        ),
+    )
+    with pytest.raises(HTTPException) as exc:
+        inv_api.investigate(inv_api.InvestigateRequest(question="Why?", demo_mode=False))
+    assert exc.value.status_code == 502
+    assert "MODEL_NAME is exactly muse-spark-1.3" in exc.value.detail
+
+
+def test_metaclient_strips_quotes_and_space(monkeypatch):
+    from backend.agent.orchestrator import MetaClient
+
+    monkeypatch.setenv("MODEL_NAME", '  "muse-spark-1.3" \n')
+    monkeypatch.setenv("META_API_BASE_URL", "https://api.meta.ai/v1 ")
+    assert MetaClient().model == "muse-spark-1.3"
+    assert MetaClient().base_url == "https://api.meta.ai/v1"
+
+
 def test_investigate_missing_dataset_is_400(env):
     with pytest.raises(HTTPException) as exc:
         inv_api.investigate(
@@ -147,3 +171,30 @@ def test_session_file_unknown_extension_is_400(env):
             sessions_api.SessionFileRequest(filename="x.pdf", kind="bank", content="junk"),
         )
     assert exc.value.status_code == 400
+
+
+def test_metaclient_strips_env_whitespace(monkeypatch):
+    from backend.agent.orchestrator import MetaClient
+
+    monkeypatch.setenv("MODEL_NAME", "  muse-spark-1.3\n")
+    monkeypatch.setenv("MODEL_API_KEY", "  secret-key  ")
+    monkeypatch.setenv("META_API_BASE_URL", "  https://api.meta.ai/v1  ")
+    client = MetaClient()
+    assert client.model == "muse-spark-1.3"
+    assert client.api_key == "secret-key"
+    assert client.base_url == "https://api.meta.ai/v1"
+
+
+def test_investigate_502_names_model_and_endpoint(env, monkeypatch):
+    monkeypatch.setenv("MODEL_API_KEY", "test-key")
+    monkeypatch.setenv("MODEL_NAME", "muse-spark-1.3")
+
+    def boom(question, ctx, client):
+        raise RuntimeError("Error code: 404 - The requested model was not found.")
+
+    monkeypatch.setattr(inv_api, "run_investigation", boom)
+    with pytest.raises(HTTPException) as exc:
+        inv_api.investigate(inv_api.InvestigateRequest(question="Why?"))
+    assert exc.value.status_code == 502
+    assert "muse-spark-1.3" in exc.value.detail
+    assert "test-key" not in exc.value.detail

@@ -15,6 +15,11 @@ from .prompts import REPAIR_PROMPT, SYSTEM_PROMPT
 from .tools import TOOL_SCHEMAS, ToolContext, run_tool
 
 
+def _clean(value: str) -> str:
+    """Strip whitespace and stray quotes from pasted env values."""
+    return (value or "").strip().strip("\"'").strip()
+
+
 @dataclass
 class InvestigationResult:
     question: str
@@ -45,9 +50,11 @@ class MetaClient:
         api_key: str | None = None,
         max_tokens: int = 8000,
     ):
-        self.model = model or os.getenv("MODEL_NAME", "muse-spark-1.3")
-        self.base_url = base_url or os.getenv("META_API_BASE_URL", "https://api.meta.ai/v1")
-        self.api_key = api_key or os.getenv("MODEL_API_KEY", "")
+        # Dashboard-pasted values often carry stray whitespace or quotes,
+        # which the model API rejects (e.g. a padded model id 404s).
+        self.model = _clean(model or os.getenv("MODEL_NAME", "muse-spark-1.3"))
+        self.base_url = _clean(base_url or os.getenv("META_API_BASE_URL", "https://api.meta.ai/v1"))
+        self.api_key = _clean(api_key or os.getenv("MODEL_API_KEY", ""))
         self.max_tokens = max_tokens
 
     def chat(self, messages: list[dict], tools: list[dict]) -> dict:
