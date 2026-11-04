@@ -132,7 +132,7 @@ export default function Home() {
           {PROOF_STATS.map((s) => (
             <div key={s.label} className="flex flex-col">
               <dt className="order-2 mt-1 text-xs leading-snug text-ink/60">{s.label}</dt>
-              <dd className="order-1 font-display text-xl font-bold tabular-nums sm:text-2xl">
+              <dd className="order-1 font-display text-[17px] font-bold leading-tight tabular-nums sm:text-2xl">
                 {s.value}
               </dd>
             </div>
