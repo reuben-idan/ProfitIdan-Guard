@@ -21,6 +21,8 @@ finance code computes every figure; **TradeGuard** re-verifies each claim;
 controlled execution drafts WhatsApp-ready actions that nothing sends without
 owner approval.
 
+**Live demo:** https://frontend-five-ebon-61.vercel.app/
+
 ## How it works
 
 1. **Bring records** — upload 5 files (invoices, supplier bills, bank,
@@ -121,6 +123,7 @@ Script: [docs/demo-script.md](docs/demo-script.md).
   [docs/render-deploy.md](docs/render-deploy.md). Push to `main` auto-deploys.
 - Frontend: Vercel project, Root Directory `frontend`, `NEXT_PUBLIC_API_URL`
   pointing at the Render service URL. Push to `main` auto-deploys.
+  Live: https://frontend-five-ebon-61.vercel.app/
 
 ## Submission
 
