@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 
 from .prompts import REPAIR_PROMPT, SYSTEM_PROMPT
@@ -105,12 +106,18 @@ def run_investigation(
         if not tool_calls:
             if _finish(result, reply.get("content") or ""):
                 return result
-            # One repair turn, no tools: ask for the JSON object again.
-            messages.append({"role": "user", "content": REPAIR_PROMPT})
-            repair = client.chat(messages, [])
-            if _finish(result, repair.get("content") or ""):
-                return result
-            result.narrative = repair.get("content") or reply.get("content") or ""
+            # Two repair turns, no tools: quote the syntax error back so the
+            # model can fix exactly what broke.
+            _, _, error = _parse_final(reply.get("content") or "")
+            last_content = reply.get("content") or ""
+            for _ in range(2):
+                messages.append({"role": "user", "content": _repair_prompt(error)})
+                repair = client.chat(messages, [])
+                last_content = repair.get("content") or ""
+                if _finish(result, last_content):
+                    return result
+                _, _, error = _parse_final(last_content)
+            result.narrative = _honest_narrative(last_content)
             return result
         for call in tool_calls:
             output = run_tool(ctx, call["name"], call["arguments"])
@@ -149,13 +156,124 @@ def _extract_json(content: str) -> str:
 
 
 def _finish(result: InvestigationResult, content: str) -> bool:
-    try:
-        final = json.loads(_extract_json(content))
-    except (json.JSONDecodeError, AttributeError, TypeError):
+    findings, actions, _ = _parse_final(content)
+    if findings is None:
         return False
-    if not isinstance(final, dict) or "findings" not in final:
-        return False
-    result.findings = final.get("findings", [])
-    result.recommended_actions = final.get("recommended_actions", [])
+    result.findings = findings
+    result.recommended_actions = actions or []
     result.completed = True
     return True
+
+
+def _repair_prompt(error: str | None) -> str:
+    if not error:
+        return REPAIR_PROMPT
+    return f"{REPAIR_PROMPT} The syntax error in your last message was: {error[:200]}"
+
+
+def _honest_narrative(content: str) -> str:
+    """Narrative for an unparseable final answer: keep short human prose,
+    never dump a JSON blob the UI would render as a wall of text."""
+    text = (content or "").strip()
+    if len(text) <= 500 and not text.startswith("{") and '"findings"' not in text:
+        return text
+    return (
+        "The model did not return a readable final answer, so there are no "
+        "findings to show. The tool steps above still ran — try Instant review "
+        "for a deterministic answer from the same records."
+    )
+
+
+def _strip_controls(text: str) -> str:
+    return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", text)
+
+
+def _extract_balanced(text: str, start: int, open_ch: str, close_ch: str) -> str | None:
+    """String-aware balanced-span extraction starting at an opener."""
+    depth = 0
+    in_string = False
+    escaped = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+        elif ch == '"':
+            in_string = True
+        elif ch == open_ch:
+            depth += 1
+        elif ch == close_ch:
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return None
+
+
+def _salvage_array(text: str, key: str) -> list | None:
+    """Parse one top-level array by key, tolerating corruption elsewhere."""
+    match = re.search(rf'"{key}"\s*:', text)
+    if not match:
+        return None
+    bracket = text.find("[", match.end())
+    if bracket == -1:
+        return None
+    span = _extract_balanced(text, bracket, "[", "]")
+    if span is None:
+        return None
+    try:
+        value = json.loads(_strip_controls(span))
+    except json.JSONDecodeError:
+        return None
+    return value if isinstance(value, list) else None
+
+
+def _parse_final(content: str) -> tuple[list | None, list | None, str | None]:
+    """Parse a final answer into (findings, actions, error).
+
+    Tries whole-object parses first, then scans for an embedded object,
+    then salvages each array independently so corruption between them
+    (as seen in production) still yields verified findings.
+    """
+    text = content.strip() if isinstance(content, str) else ""
+    if not text:
+        return None, None, "empty response"
+    candidates = [text, _extract_json(text)]
+    candidates += [_strip_controls(c) for c in list(candidates)]
+    error: str | None = "no JSON object with findings found"
+    for candidate in candidates:
+        try:
+            final = json.loads(candidate)
+        except json.JSONDecodeError as exc:
+            error = str(exc)
+            continue
+        if isinstance(final, dict) and isinstance(final.get("findings"), list):
+            actions = final.get("recommended_actions", [])
+            return final["findings"], actions if isinstance(actions, list) else [], None
+    decoder = json.JSONDecoder()
+    for candidate in candidates:
+        for match in re.finditer(r"\{", candidate):
+            try:
+                obj, _ = decoder.raw_decode(candidate[match.start() :])
+            except json.JSONDecodeError as exc:
+                error = str(exc)
+                continue
+            if isinstance(obj, dict) and isinstance(obj.get("findings"), list):
+                actions = obj.get("recommended_actions", [])
+                if not isinstance(actions, list) or not actions:
+                    # Prefix hit (trailing corruption cut the object short):
+                    # recover the actions array independently.
+                    salvaged = _salvage_array(candidate, "recommended_actions")
+                    if salvaged:
+                        actions = salvaged
+                return obj["findings"], actions if isinstance(actions, list) else [], None
+    findings = _salvage_array(text, "findings")
+    if findings is None:
+        findings = _salvage_array(_extract_json(text), "findings")
+    if findings is not None:
+        actions = _salvage_array(text, "recommended_actions")
+        return findings, actions if actions is not None else [], None
+    return None, None, error

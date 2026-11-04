@@ -59,6 +59,16 @@ export default function InvestigationPanel({ record }: { record: InvestigationRe
   const { steps, recommended_actions, narrative } = record.result;
   return (
     <div className="space-y-6">
+      {!record.result.completed && (
+        <p
+          role="alert"
+          className="rounded-xl border border-gold-700/30 bg-gold-100/60 px-4 py-3 text-sm leading-relaxed text-gold-800"
+        >
+          <strong>Incomplete investigation.</strong> The model&apos;s final answer could not be
+          read, so findings below may be partial. The tool steps ran — re-run, or use Instant
+          review for a deterministic answer from the same records.
+        </p>
+      )}
       <Card className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3.5">
         <p className="text-sm font-bold">TradeGuard</p>
         <p className="font-display text-lg font-bold text-pine-700 tabular-nums">
@@ -97,7 +107,9 @@ export default function InvestigationPanel({ record }: { record: InvestigationRe
             </Card>
           ))}
         </div>
-        {narrative && <p className="mt-2.5 text-sm text-ink/60">Note: {narrative}</p>}
+        {narrative && (
+          <p className="mt-2.5 break-words text-sm leading-relaxed text-ink/60">Note: {narrative}</p>
+        )}
       </section>
 
       <section>
@@ -105,6 +117,11 @@ export default function InvestigationPanel({ record }: { record: InvestigationRe
         <p className="mt-0.5 text-sm text-ink/60">
           Ranked by cash freed fastest. Drafting prepares a message — approval still required.
         </p>
+        {recommended_actions.length === 0 && (
+          <p className="mt-2 rounded-lg bg-mist px-3.5 py-2.5 text-sm text-ink/60">
+            No actions were drafted for this run.
+          </p>
+        )}
         {draftMsg && <p role="status" className="mt-2 rounded-lg bg-pine-50 px-3.5 py-2.5 text-sm text-pine-900">{draftMsg}</p>}
         <ol className="mt-2.5 space-y-2.5">
           {recommended_actions.map((a, i) => (
