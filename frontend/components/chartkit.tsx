@@ -70,8 +70,12 @@ function downloadBlob(blob: Blob, filename: string) {
   a.download = filename;
   document.body.appendChild(a);
   a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // Deferred: detaching the anchor or revoking the URL synchronously
+  // cancels blob downloads in Chromium before the browser consumes them.
+  setTimeout(() => {
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 4000);
 }
 
 function serializeSvg(svg: SVGSVGElement, title: string): string {

@@ -64,6 +64,11 @@ function RunwayChart({
   const [showOn, setShowOn] = useState(true);
   const [showSlip, setShowSlip] = useState(true);
 
+  // New horizon, new story anchor: re-select the crossing (or final) day.
+  useEffect(() => {
+    setSel(crossingDay ?? points.length - 1);
+  }, [points, crossingDay, horizon]);
+
   const W = 640;
   const H = 300;
   const M = { l: 58, r: 16, t: 16, b: 32 };
