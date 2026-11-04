@@ -64,8 +64,8 @@ export default function TabBar() {
               key={tab.href}
               href={tab.href}
               aria-current={active ? "page" : undefined}
-              className={`relative flex flex-col items-center gap-1 px-2 pb-2.5 pt-2 text-[11px] font-semibold transition active:bg-pine-50 ${
-                active ? "text-pine-800" : "text-ink/45"
+              className={`relative flex min-h-[60px] flex-col items-center justify-center gap-1 px-2 pb-2.5 pt-2 text-[11px] font-semibold transition active:bg-pine-50 ${
+                active ? "text-pine-800" : "text-ink/55"
               }`}
             >
               <span

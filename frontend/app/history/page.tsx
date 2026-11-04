@@ -57,7 +57,7 @@ export default function HistoryPage() {
               href={`/investigations/${item.id}`}
               className="block rounded-xl border border-ink/10 bg-white p-4 shadow-card transition hover:border-pine-700/50 active:scale-[0.99] sm:p-5"
             >
-              <p className="font-semibold leading-snug">{item.question}</p>
+              <p className="break-words font-semibold leading-snug">{item.question}</p>
               <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink/55">
                 <span className="font-mono">{item.id}</span>
                 <span aria-hidden="true">·</span>

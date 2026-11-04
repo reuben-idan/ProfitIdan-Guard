@@ -59,7 +59,7 @@ export default function InvestigationPage() {
         {record.demo_mode && <Pill tone="info">Instant review</Pill>}
       </p>
       <section className="overflow-hidden rounded-2xl bg-pine-900 p-5 text-white shadow-pop sm:p-6">
-        <h1 className="max-w-2xl text-lg font-bold leading-snug sm:text-xl">
+        <h1 className="max-w-2xl break-words text-lg font-bold leading-snug sm:text-xl">
           {record.question}
         </h1>
         {topCash ? (

@@ -61,12 +61,26 @@ def _excel_value(value: object) -> str:
     return str(value)
 
 
-def parse_upload(filename: str, content: str, content_base64: str | None) -> list[dict]:
+def _canon_headers(kind: str | None, rows: list[dict]) -> list[dict]:
+    """Map headers to schema names, forgiving Excel casing and spacing."""
+    if kind not in REQUIRED_COLUMNS:
+        return rows
+    want = {c.lower(): c for c in REQUIRED_COLUMNS[kind]}
+    return [
+        {want.get((k or "").strip().lower(), (k or "").strip()): v for k, v in row.items()}
+        for row in rows
+    ]
+
+
+def parse_upload(
+    filename: str, content: str, content_base64: str | None, kind: str | None = None
+) -> list[dict]:
     """Parse an upload by file extension into row dicts.
 
     Raises UploadFormatError with a user-facing message on anything
     unreadable; never raises csv/JSON/Excel internals to callers.
     """
+    content = (content or "").lstrip("\ufeff")
     suffix = Path(filename or "").suffix.lower()
     if suffix == ".json":
         if not (content or "").strip():
@@ -79,7 +93,9 @@ def parse_upload(filename: str, content: str, content_base64: str | None) -> lis
             data = data["rows"]
         if not isinstance(data, list) or not all(isinstance(r, dict) for r in data):
             raise UploadFormatError('JSON must be an array of objects (or {"rows": [...]})')
-        return [{k: ("" if v is None else str(v)) for k, v in row.items()} for row in data]
+        return _canon_headers(
+            kind, [{k: ("" if v is None else str(v)) for k, v in row.items()} for row in data]
+        )
     if suffix == ".xlsx":
         if not content_base64:
             raise UploadFormatError("Excel upload arrived without file bytes")
@@ -102,7 +118,7 @@ def parse_upload(filename: str, content: str, content_base64: str | None) -> lis
             if all(v is None or str(v).strip() == "" for v in values):
                 continue
             rows.append({h: _excel_value(v) for h, v in zip(header, values)})
-        return rows
+        return _canon_headers(kind, rows)
     if suffix in (".csv", ".tsv", ".tab"):
         if not (content or "").strip():
             raise UploadFormatError("empty file")
@@ -110,7 +126,9 @@ def parse_upload(filename: str, content: str, content_base64: str | None) -> lis
             parsed = list(csv.DictReader(io.StringIO(content), delimiter="," if suffix == ".csv" else "\t"))
         except (csv.Error, UnicodeDecodeError) as exc:
             raise UploadFormatError(f"could not parse {suffix} file: {exc}")
-        return [{k: (v or "") for k, v in row.items() if k is not None} for row in parsed]
+        return _canon_headers(
+            kind, [{k: (v or "") for k, v in row.items() if k is not None} for row in parsed]
+        )
     raise UploadFormatError(f"unsupported file type {suffix or '(none)'} — {FORMAT_HINT}")
 
 
@@ -127,10 +145,11 @@ def to_canonical_csv(kind: str, rows: list[dict]) -> str:
 def validate_rows(kind: str, rows: list[dict]) -> tuple[list[dict], list[str]]:
     issues: list[str] = []
     expected = REQUIRED_COLUMNS[kind]
-    header = rows[0].keys() if rows else []
-    for col in expected:
-        if col not in header:
-            issues.append(f"missing required column: {col}")
+    header = list(rows[0].keys()) if rows else []
+    missing = [col for col in expected if col not in header]
+    if missing:
+        found = ", ".join(header) if header else "(no header row)"
+        issues.append(f"missing required column(s): {', '.join(missing)} — found: {found}")
     seen: set[str] = set()
     id_col = expected[0]
     accepted: list[dict] = []
@@ -163,13 +182,15 @@ def validate_rows(kind: str, rows: list[dict]) -> tuple[list[dict], list[str]]:
                 issues.append(f"row {n}: missing value {col}")
         if not skip:
             accepted.append(row)
+    if len(issues) > 100:
+        issues = issues[:100] + [f"...and {len(issues) - 100} more issues (showing first 100)"]
     return accepted, issues
 
 
 def validate_csv(kind: str, content: str) -> tuple[list[dict], list[str]]:
     """Validate CSV text; unparseable input becomes issues, never raises."""
     try:
-        rows = parse_upload("upload.csv", content, None)
+        rows = parse_upload("upload.csv", content, None, kind)
     except UploadFormatError as exc:
         return [], [str(exc)]
     return validate_rows(kind, rows)
@@ -199,7 +220,7 @@ def upload(req: UploadRequest) -> dict:
     if req.kind not in REQUIRED_COLUMNS:
         return {"status": "rejected", "issues": [f"unknown kind: {req.kind}"]}
     try:
-        rows = parse_upload(req.filename, req.content, req.content_base64)
+        rows = parse_upload(req.filename, req.content, req.content_base64, req.kind)
     except UploadFormatError as exc:
         return {"status": "rejected", "issues": [str(exc)]}
     accepted, issues = validate_rows(req.kind, rows)

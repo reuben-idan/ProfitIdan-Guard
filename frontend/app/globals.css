@@ -31,6 +31,20 @@ h1 {
   @apply absolute inset-0 animate-sweep bg-gradient-to-r from-transparent via-white/70 to-transparent;
 }
 
+/* Disclosure chevron replaces the stock marker and tracks open state. */
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+.chev {
+  transition: transform 0.2s ease-out;
+}
+details[open] .chev {
+  transform: rotate(180deg);
+}
+
 /* Number inputs: keep them clean on mobile. */
 input[type="number"] {
   appearance: textfield;

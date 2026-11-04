@@ -55,7 +55,7 @@ export default function ApprovalCard({ action, onChange }: { action: Action; onC
           {action.type.replace(/_/g, " ")} · <span className="font-mono">{action.id}</span>
         </p>
       </div>
-      <h3 className="mt-2 text-lg font-bold tracking-tight">
+      <h3 className="mt-2 break-words text-lg font-bold tracking-tight">
         {action.target} ·{" "}
         <span className="font-display tabular-nums">{formatMoney(action.amount)}</span>
       </h3>

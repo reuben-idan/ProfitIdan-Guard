@@ -163,6 +163,82 @@ def test_demo_mode_migration_backfills_old_db(tmp_path):
     assert store.get_investigation(iid)["demo_mode"] == 1
 
 
+def test_upload_strips_bom_and_normalizes_headers(env):
+    header = "txn_id,date,description,reference,amount"
+    row = "B-1,2026-10-01,Payment,INV-1,100.00"
+    body = uploads_api.upload(
+        uploads_api.UploadRequest(
+            filename="bank.csv", kind="bank", content="\ufeff" + header + "\n" + row + "\n"
+        )
+    )
+    assert body["rows_accepted"] == 1, body["issues"]
+    body = uploads_api.upload(
+        uploads_api.UploadRequest(
+            filename="bank.csv",
+            kind="bank",
+            content="Txn_ID , DATE, Description,Reference, Amount \n" + row + "\n",
+        )
+    )
+    assert body["rows_accepted"] == 1, body["issues"]
+
+
+def test_missing_columns_name_what_was_found(env):
+    body = uploads_api.upload(
+        uploads_api.UploadRequest(
+            filename="bank.csv", kind="bank", content="foo,bar\n1,2\n"
+        )
+    )
+    assert body["rows_accepted"] == 0
+    assert any("found: foo, bar" in i for i in body["issues"]), body["issues"]
+
+
+def test_issues_are_capped(env):
+    rows = "\n".join(f",2026-10-01,Payment,INV-{n},100.00" for n in range(150))
+    body = uploads_api.upload(
+        uploads_api.UploadRequest(
+            filename="bank.csv",
+            kind="bank",
+            content="txn_id,date,description,reference,amount\n" + rows + "\n",
+        )
+    )
+    assert len(body["issues"]) <= 101
+    assert "more issues" in body["issues"][-1]
+
+
+def test_session_rejects_zero_accepted_and_keeps_previous(env):
+    from pathlib import Path
+
+    demo = Path(__file__).resolve().parents[2] / "data" / "demo" / "bank.csv"
+    s = sessions_api.create_session(sessions_api.CreateSessionRequest(name="t"))
+    good = sessions_api.upload_session_file(
+        s["id"],
+        sessions_api.SessionFileRequest(filename="bank.csv", kind="bank", content=demo.read_text()),
+    )
+    assert good["status"] == "accepted"
+    before = Path(good["path"]).read_text()
+    bad = sessions_api.upload_session_file(
+        s["id"],
+        sessions_api.SessionFileRequest(filename="bank.csv", kind="bank", content="foo,bar\n1,2\n"),
+    )
+    assert bad["status"] == "rejected"
+    assert bad["rows_accepted"] == 0
+    assert Path(good["path"]).read_text() == before
+    status = sessions_api.session_status(s["id"])
+    assert status["files"]["bank"]["present"] is True
+
+
+def test_session_first_upload_garbage_stores_nothing(env):
+    s = sessions_api.create_session(sessions_api.CreateSessionRequest(name="t"))
+    bad = sessions_api.upload_session_file(
+        s["id"],
+        sessions_api.SessionFileRequest(filename="bank.csv", kind="bank", content="foo,bar\n1,2\n"),
+    )
+    assert bad["status"] == "rejected"
+    assert bad["path"] == ""
+    status = sessions_api.session_status(s["id"])
+    assert status["files"]["bank"] == {"present": False}
+
+
 def test_session_file_unknown_extension_is_400(env):
     s = sessions_api.create_session(sessions_api.CreateSessionRequest(name="t"))
     with pytest.raises(HTTPException) as exc:

@@ -78,6 +78,7 @@ export default function FileDrop({
 }) {
   const [kind, setKind] = useState<string>("invoices");
   const [report, setReport] = useState<string | null>(null);
+  const [rejected, setRejected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
@@ -85,15 +86,19 @@ export default function FileDrop({
     if (!file || busy) return;
     setBusy(true);
     setReport(null);
+    setRejected(false);
     try {
       const isWorkbook = /\.xlsx$/i.test(file.name);
       const content = isWorkbook ? "" : await file.text();
       const contentBase64 = isWorkbook ? bufferToBase64(await file.arrayBuffer()) : undefined;
       const res = await api.uploadFile(sessionId, file.name, kind, content, contentBase64);
       const issues = res.issues.length > 0 ? ` Issues: ${res.issues.slice(0, 3).join("; ")}` : " No issues.";
-      setReport(`${res.status}: ${res.rows_accepted} rows accepted.${issues}`);
+      const bad = res.status === "rejected";
+      setRejected(bad);
+      setReport(`${bad ? "Not saved" : res.status}: ${res.rows_accepted} rows accepted.${issues}`);
       onUploaded();
     } catch (err) {
+      setRejected(true);
       setReport(`Upload failed: ${(err as Error).message}`);
     } finally {
       setBusy(false);
@@ -123,7 +128,7 @@ export default function FileDrop({
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value)}
-            className="min-h-[44px] rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm font-medium"
+            className="min-h-[44px] rounded-lg border border-ink/15 bg-white px-3 py-2 text-base font-medium"
           >
             {DATASET_KINDS.map((k) => (
               <option key={k} value={k}>{k}</option>
@@ -158,7 +163,16 @@ export default function FileDrop({
           className="sr-only"
         />
       </label>
-      {report && <p role="status" className="rounded-lg bg-mist px-3 py-2 text-sm">{report}</p>}
+      {report && (
+        <p
+          role="status"
+          className={`rounded-lg px-3 py-2 text-sm font-medium ${
+            rejected ? "bg-red-50 text-clay" : "bg-mist text-ink"
+          }`}
+        >
+          {report}
+        </p>
+      )}
     </div>
   );
 }

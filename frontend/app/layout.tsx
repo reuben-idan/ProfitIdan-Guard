@@ -66,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             <Link
               href="/"
-              className="ml-auto rounded-full bg-pine-800 px-4 py-2 text-sm font-bold text-white transition active:scale-[0.98] sm:hidden"
+              className="ml-auto inline-flex min-h-[44px] items-center rounded-full bg-pine-800 px-4 py-2 text-sm font-bold text-white transition active:scale-[0.98] sm:hidden"
             >
               New review
             </Link>

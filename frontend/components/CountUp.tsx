@@ -40,7 +40,7 @@ export default function CountUp({
   }, [amount]);
 
   return (
-    <span className={`font-display tabular-nums ${className}`}>
+    <span className={`font-display tabular-nums break-words ${className}`}>
       {formatMoney(shown.toFixed(2), currency)}
     </span>
   );

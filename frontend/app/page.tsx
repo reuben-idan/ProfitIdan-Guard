@@ -158,7 +158,7 @@ export default function Home() {
           {PROOF_STATS.map((s) => (
             <div key={s.label} className="flex flex-col">
               <dt className="order-2 mt-1 text-xs leading-snug text-ink/60">{s.label}</dt>
-              <dd className="order-1 font-display text-[17px] font-bold leading-tight tabular-nums sm:text-2xl">
+              <dd className="order-1 font-display text-[15px] font-bold leading-tight tabular-nums min-[380px]:text-[17px] sm:text-2xl">
                 {s.value}
               </dd>
             </div>
@@ -230,9 +230,22 @@ export default function Home() {
             </p>
             <KindStatus status={status} />
             <FileDrop sessionId={session.id} onUploaded={refresh} />
-            <details className="rounded-xl bg-mist p-4 text-sm">
-              <summary className="cursor-pointer font-semibold">
+            <details
+              className="rounded-xl bg-mist p-4 text-sm"
+              {...(!status?.meta_present ? { open: true } : {})}
+            >
+              <summary className="flex cursor-pointer select-none items-center justify-between gap-2 font-semibold">
                 Business details (currency, dates, opening cash)
+                <svg viewBox="0 0 16 16" aria-hidden="true" className="chev h-4 w-4 shrink-0 text-pine-800">
+                  <path
+                    d="M3 6l5 5 5-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </summary>
               <div className="mt-3 flex flex-wrap gap-2">
                 {Object.entries(meta).map(([k, v]) => (
@@ -241,7 +254,8 @@ export default function Home() {
                     <input
                       value={v}
                       onChange={(e) => setMeta({ ...meta, [k]: e.target.value })}
-                      className="mt-1 min-h-[44px] rounded-lg border border-ink/15 bg-white px-2.5 py-2 text-sm text-ink"
+                      inputMode={k === "opening_cash" ? "decimal" : undefined}
+                      className="mt-1 min-h-[44px] rounded-lg border border-ink/15 bg-white px-2.5 py-2 text-base text-ink"
                     />
                   </label>
                 ))}

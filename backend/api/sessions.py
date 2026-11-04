@@ -77,15 +77,29 @@ def upload_session_file(session_id: str, req: SessionFileRequest) -> dict:
     if req.kind not in REQUIRED_COLUMNS:
         raise HTTPException(status_code=400, detail=f"unknown kind: {req.kind}")
     try:
-        rows = parse_upload(req.filename, req.content, req.content_base64)
+        rows = parse_upload(req.filename, req.content, req.content_base64, req.kind)
     except UploadFormatError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     accepted, issues = validate_rows(req.kind, rows)
     dest = Path(_sessions_root()) / session_id / TABLE_FILES[req.kind]
+    if not accepted:
+        uid = _store().record_upload(req.filename, req.kind, 0, issues, "")
+        note = (
+            "Previous file kept — fix the issues and re-upload."
+            if dest.exists()
+            else "Nothing stored — fix the issues and re-upload."
+        )
+        return {
+            "status": "rejected",
+            "upload_id": uid,
+            "rows_accepted": 0,
+            "issues": [*issues, note],
+            "path": str(dest) if dest.exists() else "",
+        }
     dest.write_text(to_canonical_csv(req.kind, rows), encoding="utf-8")
     uid = _store().record_upload(req.filename, req.kind, len(accepted), issues, str(dest))
     return {
-        "status": "accepted" if accepted and not issues else "accepted_with_issues",
+        "status": "accepted" if not issues else "accepted_with_issues",
         "upload_id": uid,
         "rows_accepted": len(accepted),
         "issues": issues,
